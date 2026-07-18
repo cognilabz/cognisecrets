@@ -62,7 +62,7 @@ A `SecretReference`:
 Example:
 
 ```yaml
-apiVersion: cognilabz.com/v1
+apiVersion: cognilabz.com/v1alpha1
 kind: SecretReference
 metadata:
   name: application-credentials
