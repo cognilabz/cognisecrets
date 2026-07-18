@@ -132,6 +132,8 @@ Required behavior:
 - retry according to controller-runtime behavior;
 - use a more specific reason whenever possible.
 
+If a semantic failure requires deleting a managed target Secret but deletion fails, the controller MUST report `WriteFailed` because stale managed data still exists.
+
 ## 4. Reason precedence
 
 When multiple failures are present, the controller SHOULD report the first failure encountered in deterministic source order using this precedence:
@@ -146,6 +148,8 @@ When multiple failures are present, the controller SHOULD report the first failu
 8. `WriteFailed`
 
 `TargetAlreadyExists` is evaluated first because foreign target ownership prevents safe mutation or deletion regardless of source state.
+
+For source-related failures with the same precedence, the controller MUST report the first failure in `spec.sources` order.
 
 ## 5. Message requirements
 

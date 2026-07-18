@@ -4,9 +4,11 @@
 
 This document defines the conformance test categories required for CogniSecrets compatibility.
 
-The conformance suite is the executable form of the API, controller, lifecycle, security, and error specifications.
+The conformance suite is the portable executable form of the API, controller, lifecycle, security, and error specifications.
 
 The E2E execution model for this suite is defined separately in `10-e2e-test-concept.md`.
+
+The reference implementation MAY also include unit tests that import Go packages and assert internal helper behavior. Those tests are implementation tests, not portable conformance tests.
 
 ## 2. Test style
 
@@ -18,9 +20,9 @@ When <operation or reconcile trigger>
 Then <target Secret and SecretReference status expectations>
 ```
 
-Tests MUST assert both target Secret behavior and `Ready` condition behavior.
+Portable conformance tests MUST assert both target Secret behavior and `Ready` condition behavior.
 
-Tests MUST NOT assert implementation-private details.
+Portable conformance tests MUST NOT assert implementation-private details.
 
 ## 3. API validation tests
 
@@ -32,9 +34,9 @@ Required cases:
 - reject source without `name`;
 - reject empty `keys` list when present;
 - reject key mapping without `name`;
-- default omitted `spec.type` to `Opaque`;
-- default omitted `keys[].target` to `keys[].name`;
-- reject unknown fields when CRD pruning or validation supports it.
+- default omitted `spec.type` to `Opaque` at the API level;
+- resolve omitted `keys[].target` as `keys[].name` during controller composition;
+- reject unknown fields under `spec`.
 
 ## 4. Basic synchronization tests
 
@@ -46,7 +48,10 @@ Required cases:
 - copy one source key to multiple distinct target keys;
 - compose keys from multiple authorized sources;
 - update target Secret when source data changes;
-- avoid updating target Secret when managed fields are unchanged.
+- copy source `data` values byte-for-byte without UTF-8 assumptions;
+- ignore source `type` during composition;
+- avoid updating target Secret when managed fields are unchanged;
+- avoid updating status when the `Ready` condition is unchanged, including `observedGeneration`.
 
 ## 5. Authorization tests
 
@@ -60,6 +65,7 @@ Required cases:
 - trim whitespace around annotation entries;
 - ignore empty annotation entries;
 - ignore duplicate annotation entries;
+- ignore invalid namespace names for authorization matching;
 - reject or deny wildcard authorization in V1.
 
 ## 6. Fail-closed tests
@@ -92,7 +98,7 @@ Required cases:
 
 Required cases:
 
-- reject source Secret with `app.kubernetes.io/managed-by: cognisecrets`;
+- reject source Secret with a controller owner reference pointing to a `SecretReference`;
 - delete managed target when a source becomes CogniSecrets-managed;
 - report `ManagedSourceRejected`.
 
@@ -107,6 +113,7 @@ Required cases:
 - `TargetAlreadyExists`;
 - `ManagedSourceRejected`;
 - `TargetRejected` where feasible;
+- `WriteFailed` when fail-closed deletion fails;
 - `Synced` after recovery.
 
 Each test MUST assert that secret values are not present in status messages or events.
@@ -152,9 +159,11 @@ Required cases:
 - resource version does not change after no-op reconcile;
 - target Secret remains valid after unrelated metadata mutation.
 
+Events are best-effort diagnostics and MUST NOT be required for conformance.
+
 ## 14. Minimum release gate
 
-Before a production release, every normative MUST in the documentation SHOULD be covered by at least one conformance test.
+Before a production release, every normative MUST in the documentation SHOULD be covered by at least one portable conformance test or reference-implementation unit test.
 
 Known uncovered MUST statements MUST be documented in release notes.
 

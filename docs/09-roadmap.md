@@ -19,7 +19,7 @@ Goals:
 - define security model;
 - define lifecycle behavior;
 - define error catalog;
-- define conformance test requirements.
+- define conformance test requirements;
 - define implementation-independent E2E test concept.
 
 Exit criteria:
@@ -36,7 +36,8 @@ Goals:
 - generate CRD manifests;
 - define status condition helpers;
 - add schema validation;
-- add sample manifests.
+- add sample manifests;
+- use Go, controller-runtime, and Kubebuilder-style markers for the reference implementation.
 
 Expected directories:
 
@@ -61,7 +62,8 @@ Goals:
 - implement composition;
 - implement ownership checks;
 - implement fail-closed deletion;
-- implement status updates and events.
+- implement status updates and events;
+- add unit tests for package-level controller helpers.
 
 Expected directories:
 
@@ -82,6 +84,7 @@ Goals:
 
 - implement conformance tests from `08-conformance-test-specification.md`;
 - implement E2E execution model from `10-e2e-test-concept.md`;
+- add reference-implementation unit tests that may import Go packages;
 - run tests in CI;
 - document unsupported or deferred cases.
 

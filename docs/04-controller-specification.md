@@ -25,15 +25,16 @@ The controller MUST follow this logical sequence:
 
 1. Read the `SecretReference`.
 2. If the `SecretReference` no longer exists, rely on Kubernetes garbage collection for owned target Secrets.
-3. Read every referenced source Secret.
-4. Validate that every source Secret authorizes the target namespace.
-5. Validate that no source Secret is managed by CogniSecrets.
-6. Resolve key mappings into a complete target `data` map.
-7. Detect duplicate target keys.
-8. Build the desired target Secret.
-9. Read the current target Secret.
-10. Create, update, delete, or leave unchanged according to ownership and desired state.
-11. Update the `Ready` condition.
+3. Read the current target Secret.
+4. If the target Secret exists but is not owned by the current `SecretReference`, fail with `TargetAlreadyExists`.
+5. Read every referenced source Secret.
+6. Validate that every source Secret authorizes the target namespace.
+7. Validate that no source Secret is managed by CogniSecrets.
+8. Resolve key mappings into a complete target `data` map.
+9. Detect duplicate target keys.
+10. Build the desired target Secret.
+11. Create, update, delete, or leave unchanged according to ownership and desired state.
+12. Update the `Ready` condition.
 
 The controller MUST NOT depend on prior reconciliation state for correctness.
 
@@ -62,6 +63,10 @@ type               = SecretReference spec.type or Opaque
 data               = composed data map
 ```
 
+CogniSecrets reads source Secret values from `data` and writes target Secret values to `data`. It MUST NOT assign semantics to `stringData`.
+
+Secret data values MUST be copied byte-for-byte as stored by the Kubernetes API. The controller MUST NOT decode, normalize, transcode, trim, or assume UTF-8 content.
+
 The target Secret MUST include:
 
 ```yaml
@@ -74,8 +79,9 @@ metadata:
       name: <SecretReference name>
       uid: <SecretReference uid>
       controller: true
-      blockOwnerDeletion: true
 ```
+
+`blockOwnerDeletion` is optional in V1 and MUST NOT be required for ownership detection.
 
 ## 6. Ownership check
 
@@ -105,6 +111,8 @@ The controller MUST preserve:
 - Kubernetes-managed metadata.
 
 When comparing current and desired state, the controller MUST compare only managed fields.
+
+If the target Secret and status condition already match the desired state, including `observedGeneration`, the controller SHOULD avoid writing either resource.
 
 ## 8. Write behavior
 
@@ -137,6 +145,8 @@ Examples:
 - Kubernetes API rejects the generated target Secret.
 
 The controller MUST NOT delete a foreign target Secret.
+
+If fail-closed deletion is required but the delete operation fails, reconciliation MUST report `WriteFailed` rather than the original semantic reason because stale managed data still exists.
 
 ## 10. Status behavior
 
@@ -186,6 +196,8 @@ The controller requires permissions to:
 - get, list, and watch Kubernetes Secrets;
 - create, update, patch, and delete target Secrets;
 - create Kubernetes events.
+
+The controller requires broad Secret read/list/watch permissions for the namespaces it manages. In the default V1 deployment, this is cluster-wide because source Secrets may live in any namespace and revocation must be observed promptly.
 
 The controller MUST be implemented so that it never needs to read resources outside these requirements.
 

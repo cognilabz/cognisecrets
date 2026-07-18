@@ -59,7 +59,7 @@ In particular:
 The only intentional defaults are simple value defaults with unambiguous meaning, such as:
 
 - omitted `spec.type` means `Opaque`;
-- omitted key `target` means the source key name is retained;
+- omitted key `target` is resolved by the controller as the source key name;
 - omitted `keys` means all keys from that source are copied.
 
 ## 6. Explicit Authorization
@@ -81,6 +81,8 @@ The following rules apply:
 - the source namespace is not implicitly allowed;
 - wildcard authorization is not supported;
 - key selection is composition behavior, not an authorization boundary.
+
+This authorization model depends on Kubernetes RBAC protecting source Secret updates. Any actor that can update a source Secret annotation can grant access through CogniSecrets.
 
 ## 7. Fail Closed
 
@@ -110,7 +112,7 @@ This rule prevents:
 - complex failure cascades;
 - hidden transitive authorization.
 
-Every source must be an original Kubernetes Secret that is not managed by CogniSecrets.
+Every source must be an original Kubernetes Secret that is not managed by CogniSecrets. V1 treats a source as CogniSecrets-managed only when it has a controller owner reference pointing to a `SecretReference`.
 
 ## 9. Deterministic Composition
 
@@ -171,6 +173,8 @@ The CRD must not become unnecessarily complex in an attempt to encode controller
 CogniSecrets does not reproduce Kubernetes Secret-type validation.
 
 `spec.type` is copied to the target Secret. When omitted, it defaults to `Opaque`.
+
+Source Secret `type` is ignored during composition. The controller copies source `data` values byte-for-byte into target `data` and does not assign semantics to `stringData`.
 
 The controller submits the desired Secret to the Kubernetes API. If the API rejects it, reconciliation fails and the managed target Secret is removed according to the fail-closed principle.
 

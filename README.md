@@ -38,4 +38,4 @@ CogniSecrets is not a vault, secret store, encryption solution, rotation system,
 
 ## License
 
-A license will be selected before the first public release.
+CogniSecrets is licensed under the Apache License 2.0.

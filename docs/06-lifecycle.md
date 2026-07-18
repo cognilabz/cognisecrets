@@ -30,6 +30,8 @@ If the new desired state is valid, the managed target Secret MUST be updated onl
 
 If the new desired state is invalid, the managed target Secret MUST be deleted.
 
+If Kubernetes rejects the new desired target Secret, any existing managed target Secret MUST be deleted.
+
 ## 4. Delete
 
 When a `SecretReference` is deleted, the owned target Secret SHOULD be removed by Kubernetes garbage collection through owner references.
@@ -53,11 +55,10 @@ When a referenced source Secret changes, dependent `SecretReference` resources M
 Relevant changes include:
 
 - data changes;
-- type changes only insofar as they may change Kubernetes behavior;
 - annotation changes;
-- label changes that affect CogniSecrets-managed detection.
+- owner reference changes that affect CogniSecrets-managed detection.
 
-CogniSecrets copies only source `data`, not source metadata.
+CogniSecrets copies only source `data`, not source metadata or source `type`. Values are copied byte-for-byte as stored by the Kubernetes API.
 
 ## 7. Source Secret deletion
 

@@ -6,7 +6,7 @@ This document defines the end-to-end test concept for CogniSecrets.
 
 The E2E suite verifies that any CogniSecrets implementation conforms to the specification when running in a real Kubernetes cluster.
 
-The tests are intentionally implementation-independent. They interact only with:
+The E2E tests are intentionally implementation-independent. They interact only with:
 
 - the Kubernetes API;
 - installed CogniSecrets CRDs;
@@ -49,6 +49,8 @@ The E2E suite MUST NOT depend on:
 The suite MAY use logs, metrics, and diagnostics only as failure artifacts.
 
 The implementation under test is treated as a black box installed into the cluster.
+
+Reference-implementation unit tests are separate from E2E conformance. They MAY import Go packages and assert internal helper behavior, but they MUST NOT be required for alternative implementations to claim E2E conformance.
 
 ## 4. Installation contract
 
@@ -107,6 +109,8 @@ Common resources:
 Tests MUST use real Kubernetes Secret objects and real base64-encoded Secret data as accepted by the Kubernetes API.
 
 Tests MUST never print decoded secret values in logs, assertion messages, events, or failure summaries.
+
+Tests SHOULD include arbitrary-byte Secret data to verify byte-for-byte copying without UTF-8 assumptions.
 
 ## 7. Assertion model
 
@@ -284,7 +288,7 @@ Then unrelated metadata remains present.
 
 ### 11.13 Chain prevention
 
-Given a source Secret labeled `app.kubernetes.io/managed-by: cognisecrets`.
+Given a source Secret with a controller owner reference pointing to a `SecretReference`.
 
 When a `SecretReference` uses it as a source.
 
@@ -332,7 +336,8 @@ A release candidate MUST NOT be considered conformant unless:
 
 - the E2E suite passes against a fresh `kind` cluster;
 - no test depends on implementation internals;
-- every normative MUST in the specification is covered by an E2E or lower-level conformance test;
+- every externally observable normative MUST in the specification is covered by E2E conformance;
+- internal reference implementation behavior is covered by unit tests where direct package-level testing is useful;
 - uncovered normative behavior is explicitly documented.
 
 ## 14. Suggested repository layout
@@ -341,6 +346,7 @@ The implementation phase SHOULD add:
 
 ```text
 test/
+  unit/
   e2e/
     README.md
     suite/
@@ -350,12 +356,15 @@ test/
 
 Suggested responsibilities:
 
+- `test/unit/`: reference-implementation tests that may import Go packages;
 - `test/e2e/README.md`: how to run the suite;
 - `test/e2e/suite/`: test code;
 - `test/e2e/manifests/`: reusable Kubernetes fixtures;
 - `test/e2e/scripts/`: kind cluster setup and teardown.
 
-The exact test language is not specified. Go, shell plus `kubectl`, or another runner may be used as long as the suite remains implementation-independent.
+The reference implementation is expected to use Go, controller-runtime, and Kubebuilder-style CRD generation.
+
+The exact E2E test language is not specified. Go, shell plus `kubectl`, or another runner may be used as long as the suite remains black-box and implementation-independent.
 
 ## 15. Future compatibility
 

@@ -86,9 +86,9 @@ Type: `string`
 
 Required: no
 
-Default: `Opaque`
+API default: `Opaque`
 
-`spec.type` is copied to the generated Secret `type` field.
+`spec.type` is copied to the generated Secret `type` field. The CRD MUST default an omitted `spec.type` to `Opaque`.
 
 CogniSecrets MUST NOT reproduce Kubernetes validation for built-in Secret types. The Kubernetes API server remains authoritative. If the generated Secret is rejected, reconciliation fails with `TargetRejected`.
 
@@ -150,11 +150,13 @@ Type: `string`
 
 Required: no
 
-Default: value of `name`
+Controller resolution: value of `name` when omitted
 
 The key name in the generated target Secret.
 
 A source key MAY be copied to multiple distinct target keys. Two mappings MUST NOT produce the same target key.
+
+The CRD SHOULD NOT attempt to default `target` from `name`. The controller MUST resolve an omitted `target` as though it were equal to `name` during composition.
 
 ## 6. Status fields
 
@@ -164,13 +166,13 @@ A source key MAY be copied to multiple distinct target keys. Two mappings MUST N
 
 Type: list of conditions
 
-CogniSecrets MUST set exactly one condition type:
+CogniSecrets owns only this condition type:
 
 ```text
 Ready
 ```
 
-The controller MAY preserve unknown condition types written by other actors, but it MUST NOT depend on them.
+The controller MUST preserve condition types written by other actors when updating the `Ready` condition, but it MUST NOT depend on them.
 
 ### 6.2 Ready condition
 
@@ -192,7 +194,7 @@ reason: <precise reason>
 message: <human-readable explanation>
 ```
 
-`observedGeneration` MUST be set to the `metadata.generation` value that was reconciled.
+`observedGeneration` MUST be set to the `metadata.generation` value that was reconciled, including failed reconciliations and operational write failures.
 
 ## 7. Source authorization annotation
 
@@ -211,9 +213,12 @@ Rules:
 - Whitespace around entries is ignored.
 - Empty entries are ignored.
 - Duplicate entries are ignored.
+- Invalid namespace names are ignored for matching.
 - Namespace comparison is exact after parsing.
 - `*` is not supported in V1.
 - The source namespace is not implicitly authorized.
+
+Authorization through this annotation assumes cluster RBAC protects source Secret updates. Any actor that can update a source Secret annotation can grant access to that Secret through CogniSecrets.
 
 If the target namespace is not listed, reconciliation fails with `AccessDenied`.
 
@@ -224,8 +229,9 @@ The CRD SHOULD validate:
 - required fields;
 - object types;
 - minimum list sizes;
-- Kubernetes name formats where practical;
-- unknown fields rejection.
+- Kubernetes name formats where practical.
+
+The CRD MUST reject unknown fields under `spec`.
 
 The controller MUST validate:
 
