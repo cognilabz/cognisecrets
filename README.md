@@ -25,7 +25,8 @@ CogniSecrets is not a vault, secret store, encryption solution, rotation system,
 
 ## Documentation
 
-- [Product overview](docs/01-product-overview.md)
+1. [Product overview](docs/01-product-overview.md)
+2. [Design principles](docs/02-design-principles.md)
 
 ## License
 
