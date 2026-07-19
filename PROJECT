@@ -1,0 +1,17 @@
+domain: cognilabz.com
+layout:
+- go.kubebuilder.io/v4
+plugins:
+  go.kubebuilder.io/v4: {}
+projectName: cognisecrets
+repo: github.com/cognilabz/cognisecrets
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cognilabz.com
+  group: cognilabz
+  kind: SecretReference
+  path: github.com/cognilabz/cognisecrets/api/v1alpha1
+  version: v1alpha1
+version: "3"
