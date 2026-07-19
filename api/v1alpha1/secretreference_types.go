@@ -6,6 +6,10 @@ import (
 )
 
 const (
+	AuthorizationAnnotation = "cognisecrets.cognilabz.com/allowed-namespaces"
+	ManagedByLabel          = "app.kubernetes.io/managed-by"
+	ManagedByValue          = "cognisecrets"
+
 	// ReadyConditionType is the only condition type owned by CogniSecrets.
 	ReadyConditionType = "Ready"
 

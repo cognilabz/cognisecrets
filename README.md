@@ -8,7 +8,7 @@ It adds exactly one capability to Kubernetes: explicit, authorized Secret compos
 
 ## Status
 
-CogniSecrets is currently in the specification phase. The API, controller behavior, security model, and conformance tests are defined before implementation begins.
+CogniSecrets has an initial Go reference implementation scaffold with the `SecretReference` API, generated CRD, controller manager, RBAC, install manifests, samples, and controller unit tests.
 
 ## Core principles
 
@@ -35,6 +35,26 @@ CogniSecrets is not a vault, secret store, encryption solution, rotation system,
 8. [Conformance test specification](docs/08-conformance-test-specification.md)
 9. [Roadmap](docs/09-roadmap.md)
 10. [E2E test concept](docs/10-e2e-test-concept.md)
+
+## Development
+
+```sh
+make tools
+make generate manifests
+make test
+```
+
+Render install manifests:
+
+```sh
+make render
+```
+
+Build the controller image:
+
+```sh
+make docker-build
+```
 
 ## License
 
