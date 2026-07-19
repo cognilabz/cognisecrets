@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and unit test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.5"
+          cache: true
+
+      - name: Install local tools
+        run: make tools
+
+      - name: Verify generated files
+        run: make verify-generate
+
+      - name: Run unit tests
+        run: make test
+
+      - name: Render install manifests
+        run: make render >/tmp/cognisecrets-install.yaml
+
+      - name: Build manager binary
+        run: make build
+
+      - name: Build controller image
+        run: make docker-build
+
+  e2e:
+    name: Kind E2E smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.5"
+          cache: true
+
+      - name: Install local tools
+        run: make tools
+
+      - name: Install kind
+        run: |
+          curl -fL https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64 -o /usr/local/bin/kind
+          chmod +x /usr/local/bin/kind
+
+      - name: Run E2E smoke suite
+        run: make e2e

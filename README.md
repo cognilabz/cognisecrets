@@ -44,6 +44,12 @@ make generate manifests
 make test
 ```
 
+Run the local kind E2E smoke suite:
+
+```sh
+make e2e
+```
+
 Render install manifests:
 
 ```sh

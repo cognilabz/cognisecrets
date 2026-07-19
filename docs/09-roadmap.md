@@ -8,7 +8,7 @@ The roadmap is subordinate to the product overview, design principles, and norma
 
 ## 2. Phase 0: Specification
 
-Status: current
+Status: complete
 
 Goals:
 
@@ -29,6 +29,8 @@ Exit criteria:
 - open questions are captured explicitly.
 
 ## 3. Phase 1: API scaffolding
+
+Status: complete
 
 Goals:
 
@@ -53,6 +55,8 @@ Exit criteria:
 - valid examples are accepted.
 
 ## 4. Phase 2: Controller implementation
+
+Status: complete
 
 Goals:
 
@@ -79,6 +83,8 @@ Exit criteria:
 - no-op reconciliation avoids unnecessary writes.
 
 ## 5. Phase 3: Conformance suite
+
+Status: in progress
 
 Goals:
 

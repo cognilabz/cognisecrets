@@ -32,6 +32,10 @@ generate: $(CONTROLLER_GEN)
 test:
 	$(GOTOOLCHAIN_ENV) go test ./...
 
+.PHONY: verify-generate
+verify-generate: generate manifests
+	git diff --exit-code -- api config/crd config/rbac
+
 .PHONY: build
 build:
 	$(GOTOOLCHAIN_ENV) go build -o manager ./cmd/manager
@@ -43,6 +47,10 @@ docker-build:
 .PHONY: render
 render: $(KUSTOMIZE)
 	$(KUSTOMIZE) build config/default
+
+.PHONY: e2e
+e2e: $(KUSTOMIZE)
+	test/e2e/run.sh
 
 $(KUBEBUILDER):
 	mkdir -p $(LOCALBIN)
