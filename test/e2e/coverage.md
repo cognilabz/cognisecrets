@@ -82,7 +82,7 @@ Legend:
 - `[x]` `DuplicateTargetKey`
 - `[x]` `TargetAlreadyExists`
 - `[x]` `ManagedSourceRejected`
-- `[ ]` `TargetRejected` where feasible
+- `[x]` `TargetRejected` where feasible
 - `[u]` `WriteFailed` when fail-closed deletion fails
 - `[x]` `Synced` after recovery
 
@@ -115,13 +115,11 @@ Every E2E scenario that asserts status messages must also ensure secret values a
 ## Kubernetes Integration
 
 - `[x]` generated target Secret is accepted for `Opaque`
-- `[ ]` Kubernetes API rejection is surfaced as `TargetRejected` where reproducible
+- `[x]` Kubernetes API rejection is surfaced as `TargetRejected` where reproducible
 - `[x]` resource version does not change after no-op reconcile
 - `[x]` target Secret remains valid after unrelated metadata mutation
 
 ## Remaining Known Gaps
 
-- API rejection cases are not yet implemented in E2E.
-- `TargetRejected` is unit-tested but not yet reproduced through a portable E2E scenario.
 - `WriteFailed` is operational-failure behavior and remains unit-test-only.
 - Arbitrary-byte data copying is unit-tested; E2E currently uses printable literal values.

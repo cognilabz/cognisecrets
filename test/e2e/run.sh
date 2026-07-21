@@ -22,6 +22,11 @@ log() {
   printf '==> %s\n' "$*"
 }
 
+fail() {
+  printf '%s\n' "$*" >&2
+  exit 1
+}
+
 k() {
   "${KUBECTL}" --context "${ctx}" "$@"
 }
@@ -91,6 +96,20 @@ assert_no_secret_value_in_status() {
   for value in "$@"; do
     if [[ -n "${value}" && "${status}" == *"${value}"* ]]; then
       printf 'status message for %s/%s leaked secret value %q\n' "${namespace}" "${name}" "${value}" >&2
+      exit 1
+    fi
+  done
+}
+
+assert_no_secret_value_in_events() {
+  local namespace="$1"
+  shift
+  local events
+
+  events="$(k -n "${namespace}" get events -o jsonpath='{range .items[*]}{.message}{"\n"}{end}' 2>/dev/null || true)"
+  for value in "$@"; do
+    if [[ -n "${value}" && "${events}" == *"${value}"* ]]; then
+      printf 'events in namespace %s leaked secret value %q\n' "${namespace}" "${value}" >&2
       exit 1
     fi
   done
@@ -528,6 +547,26 @@ YAML
   if [[ "${type_change_uid_before}" == "${type_change_uid_after}" ]]; then
     fail "expected type-change Secret to be replaced when immutable type changed"
   fi
+
+  cat <<'YAML' | apply_yaml
+apiVersion: cognilabz.com/v1alpha1
+kind: SecretReference
+metadata:
+  name: target-rejected
+  namespace: lifecycle
+spec:
+  sources:
+    - namespace: shared
+      name: database
+      keys:
+        - name: username
+YAML
+  wait_for_jsonpath lifecycle secretreference/target-rejected '{.status.conditions[?(@.type=="Ready")].reason}' Synced
+  k -n lifecycle patch secretreference target-rejected --type=merge -p '{"spec":{"type":"kubernetes.io/dockerconfigjson","sources":[{"namespace":"shared","name":"database","keys":[{"name":"username"}]}]}}'
+  wait_for_jsonpath lifecycle secretreference/target-rejected '{.status.conditions[?(@.type=="Ready")].reason}' TargetRejected
+  wait_for_absent lifecycle secret/target-rejected
+  assert_no_secret_value_in_status lifecycle target-rejected app2 s3cr3t
+  assert_no_secret_value_in_events lifecycle app2 s3cr3t
 
   cat <<'YAML' | apply_yaml
 apiVersion: cognilabz.com/v1alpha1
