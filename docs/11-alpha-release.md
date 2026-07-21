@@ -29,21 +29,7 @@ git diff --check
 
 The E2E suite creates and destroys a fresh `kind` cluster.
 
-## 3. Build And Publish Image
-
-Build the versioned image:
-
-```sh
-make docker-build IMG=ghcr.io/cognilabz/cognisecrets:v0.1.0-alpha.1
-```
-
-Push the versioned image:
-
-```sh
-make docker-push IMG=ghcr.io/cognilabz/cognisecrets:v0.1.0-alpha.1
-```
-
-## 4. Generate Install Manifest
+## 3. Generate Install Manifest
 
 Generate the versioned install manifest:
 
@@ -57,7 +43,40 @@ The generated file is:
 dist/cognisecrets-v0.1.0-alpha.1.yaml
 ```
 
-## 5. Smoke Test Published Image
+## 4. Publish
+
+The primary publication path is the tag-driven GitHub Actions release workflow.
+
+After the release gate passes:
+
+```sh
+git tag v0.1.0-alpha.1
+git push origin v0.1.0-alpha.1
+```
+
+The workflow publishes:
+
+```text
+ghcr.io/cognilabz/cognisecrets:v0.1.0-alpha.1
+```
+
+It also uploads the versioned install manifest as a workflow artifact.
+
+## 5. Manual Image Publication
+
+Build the versioned image:
+
+```sh
+make docker-build IMG=ghcr.io/cognilabz/cognisecrets:v0.1.0-alpha.1
+```
+
+Push the versioned image:
+
+```sh
+make docker-push IMG=ghcr.io/cognilabz/cognisecrets:v0.1.0-alpha.1
+```
+
+## 6. Smoke Test Published Image
 
 Install the generated manifest into a test cluster:
 
@@ -67,15 +86,6 @@ kubectl -n cognisecrets-system rollout status deployment/cognisecrets-controller
 ```
 
 Apply the README example and confirm the `SecretReference` reports `Ready=True` with reason `Synced`.
-
-## 6. Tag
-
-After the release gate passes and artifacts are published:
-
-```sh
-git tag v0.1.0-alpha.1
-git push origin v0.1.0-alpha.1
-```
 
 ## 7. Known Limitation
 

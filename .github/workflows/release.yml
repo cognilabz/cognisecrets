@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  release:
+    name: Publish image and manifest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.5"
+          cache: true
+
+      - name: Install local tools
+        run: make tools
+
+      - name: Verify generated files
+        run: make verify-generate
+
+      - name: Run unit tests
+        run: make test
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push controller image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/cognilabz/cognisecrets:${{ github.ref_name }}
+
+      - name: Generate install manifest
+        run: make release-manifest VERSION=${{ github.ref_name }}
+
+      - name: Upload install manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: cognisecrets-${{ github.ref_name }}-install
+          path: dist/cognisecrets-${{ github.ref_name }}.yaml
