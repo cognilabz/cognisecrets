@@ -28,6 +28,8 @@ Changes that may affect the target include:
 
 If the new desired state is valid, the managed target Secret MUST be updated only when managed fields differ.
 
+If the only safe way to apply the new desired state is replacement, such as changing Kubernetes Secret `type`, the controller MUST delete the owned target Secret and recreate it with the desired managed fields after deletion completes. The controller MUST NOT remove user finalizers to force replacement.
+
 If the new desired state is invalid, the managed target Secret MUST be deleted.
 
 If Kubernetes rejects the new desired target Secret, any existing managed target Secret MUST be deleted.

@@ -211,6 +211,52 @@ func TestReconcilePreservesUnmanagedTargetMetadata(t *testing.T) {
 	}
 }
 
+func TestReconcileReplacesManagedTargetWhenTypeChanges(t *testing.T) {
+	ctx := context.Background()
+	ref := newReference("application", "database", []cogniv1alpha1.SecretSource{{
+		Namespace: "shared",
+		Name:      "database",
+		Keys: []cogniv1alpha1.SecretKeyMapping{
+			{Name: "username"},
+			{Name: "password"},
+		},
+	}})
+	ref.Spec.Type = corev1.SecretTypeBasicAuth
+	source := newSource("shared", "database", "application", map[string][]byte{
+		"username": []byte("app"),
+		"password": []byte("secret"),
+	})
+	target := newManagedTarget(ref, map[string][]byte{"username": []byte("stale")})
+	reconciler := newTestReconciler(t, ref, source, target)
+
+	result, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Namespace: ref.Namespace, Name: ref.Name}})
+	if err != nil {
+		t.Fatalf("reconcile failed: %v", err)
+	}
+	if !result.Requeue {
+		t.Fatalf("expected reconcile to requeue after deleting immutable type")
+	}
+	var deleted corev1.Secret
+	if getErr := reconciler.Get(ctx, types.NamespacedName{Namespace: "application", Name: "database"}, &deleted); getErr == nil {
+		t.Fatalf("expected old typed target to be deleted")
+	}
+
+	reconcileOnce(t, ctx, reconciler, ref)
+
+	var replaced corev1.Secret
+	if getErr := reconciler.Get(ctx, types.NamespacedName{Namespace: "application", Name: "database"}, &replaced); getErr != nil {
+		t.Fatalf("expected replacement target: %v", getErr)
+	}
+	if replaced.Type != corev1.SecretTypeBasicAuth {
+		t.Fatalf("target type = %q, want %q", replaced.Type, corev1.SecretTypeBasicAuth)
+	}
+	assertData(t, replaced.Data, map[string][]byte{
+		"username": []byte("app"),
+		"password": []byte("secret"),
+	})
+	assertReady(t, reconciler.Client, ctx, ref, metav1.ConditionTrue, cogniv1alpha1.ReasonSynced)
+}
+
 func TestTargetRejectedDeletesExistingManagedTarget(t *testing.T) {
 	ctx := context.Background()
 	ref := newReference("application", "database", []cogniv1alpha1.SecretSource{{Namespace: "shared", Name: "database"}})

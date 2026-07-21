@@ -129,6 +129,15 @@ The controller MUST update the target Secret when:
 - the target Secret is owned by the current `SecretReference`;
 - at least one managed field differs.
 
+Because Kubernetes Secret `type` is immutable after creation, a type difference MUST be handled by replacing the owned target Secret instead of updating it in place.
+
+Replacement means:
+
+- delete the owned target Secret;
+- never delete or adopt a foreign target Secret;
+- create a new target Secret with the desired type after the old target is absent;
+- preserve user finalizers by not removing them. If finalizers delay deletion, replacement remains pending and reconciliation MUST retry.
+
 The controller MUST avoid writes when managed fields are already equal.
 
 ## 9. Fail-closed deletion

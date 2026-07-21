@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"time"
 
 	cogniv1alpha1 "github.com/cognilabz/cognisecrets/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -100,6 +101,20 @@ func (r *SecretReferenceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	if managedFieldsEqual(&target, desired) {
 		return r.setReady(ctx, &ref)
+	}
+
+	if target.Type != desired.Type {
+		if !target.DeletionTimestamp.IsZero() {
+			return ctrl.Result{RequeueAfter: time.Second}, nil
+		}
+		if err := r.Delete(ctx, &target); err != nil && !apierrors.IsNotFound(err) {
+			msg := fmt.Sprintf("failed to replace managed target Secret %s/%s after type change: %v", ref.Namespace, ref.Name, err)
+			r.event(&ref, corev1.EventTypeWarning, cogniv1alpha1.ReasonWriteFailed, msg)
+			result, statusErr := r.setFailure(ctx, &ref, cogniv1alpha1.ReasonWriteFailed, msg)
+			return result, firstErr(err, statusErr)
+		}
+		r.event(&ref, corev1.EventTypeNormal, "TargetReplacing", fmt.Sprintf("deleted target Secret %s/%s to replace immutable type", ref.Namespace, ref.Name))
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	updated := target.DeepCopy()
