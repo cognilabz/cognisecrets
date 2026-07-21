@@ -26,11 +26,13 @@ jobs:
       - name: Install local tools
         run: make tools
 
-      - name: Verify generated files
-        run: make verify-generate
+      - name: Install kind
+        run: |
+          curl -fL https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64 -o /usr/local/bin/kind
+          chmod +x /usr/local/bin/kind
 
-      - name: Run unit tests
-        run: make test
+      - name: Run release gate
+        run: make release-gate
 
       - name: Log in to GHCR
         uses: docker/login-action@v3

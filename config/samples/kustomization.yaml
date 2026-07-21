@@ -1,4 +1,4 @@
 resources:
-  - cognilabz_v1alpha1_secretreference_all_keys.yaml
-  - cognilabz_v1alpha1_secretreference_renamed_keys.yaml
-  - cognilabz_v1alpha1_secretreference_multi_source.yaml
+  - cognilabz_v1beta1_secretreference_all_keys.yaml
+  - cognilabz_v1beta1_secretreference_renamed_keys.yaml
+  - cognilabz_v1beta1_secretreference_multi_source.yaml

@@ -156,7 +156,7 @@ scenario_api_validation() {
   k create namespace api-validation
 
   expect_apply_failure "missing sources" "$(cat <<'YAML'
-apiVersion: cognilabz.com/v1alpha1
+apiVersion: cognilabz.com/v1beta1
 kind: SecretReference
 metadata:
   name: missing-sources
@@ -166,7 +166,7 @@ YAML
 )"
 
   expect_apply_failure "empty sources" "$(cat <<'YAML'
-apiVersion: cognilabz.com/v1alpha1
+apiVersion: cognilabz.com/v1beta1
 kind: SecretReference
 metadata:
   name: empty-sources
@@ -177,7 +177,7 @@ YAML
 )"
 
   expect_apply_failure "source without namespace" "$(cat <<'YAML'
-apiVersion: cognilabz.com/v1alpha1
+apiVersion: cognilabz.com/v1beta1
 kind: SecretReference
 metadata:
   name: missing-namespace
@@ -189,7 +189,7 @@ YAML
 )"
 
   expect_apply_failure "source without name" "$(cat <<'YAML'
-apiVersion: cognilabz.com/v1alpha1
+apiVersion: cognilabz.com/v1beta1
 kind: SecretReference
 metadata:
   name: missing-name
@@ -201,7 +201,7 @@ YAML
 )"
 
   expect_apply_failure "empty keys" "$(cat <<'YAML'
-apiVersion: cognilabz.com/v1alpha1
+apiVersion: cognilabz.com/v1beta1
 kind: SecretReference
 metadata:
   name: empty-keys
@@ -215,7 +215,7 @@ YAML
 )"
 
   expect_apply_failure "key without name" "$(cat <<'YAML'
-apiVersion: cognilabz.com/v1alpha1
+apiVersion: cognilabz.com/v1beta1
 kind: SecretReference
 metadata:
   name: missing-key-name
@@ -230,7 +230,7 @@ YAML
 )"
 
   expect_apply_failure "unknown spec field" "$(cat <<'YAML'
-apiVersion: cognilabz.com/v1alpha1
+apiVersion: cognilabz.com/v1beta1
 kind: SecretReference
 metadata:
   name: unknown-field
@@ -273,7 +273,7 @@ data:
 YAML
 
   cat <<'YAML' | apply_yaml
-apiVersion: cognilabz.com/v1alpha1
+apiVersion: cognilabz.com/v1beta1
 kind: SecretReference
 metadata:
   name: all-keys
@@ -291,7 +291,7 @@ YAML
   assert_jsonpath basic secret/all-keys '{.metadata.ownerReferences[0].controller}' true
 
   cat <<'YAML' | apply_yaml
-apiVersion: cognilabz.com/v1alpha1
+apiVersion: cognilabz.com/v1beta1
 kind: SecretReference
 metadata:
   name: binary-copy
@@ -323,7 +323,7 @@ YAML
   wait_for_jsonpath basic secret/all-keys '{.data.username}' YXBwMg==
 
   cat <<'YAML' | apply_yaml
-apiVersion: cognilabz.com/v1alpha1
+apiVersion: cognilabz.com/v1beta1
 kind: SecretReference
 metadata:
   name: composed
@@ -365,7 +365,7 @@ scenario_authorization_failures() {
   k -n shared annotate secret wildcard cognisecrets.cognilabz.com/allowed-namespaces='*'
 
   cat <<'YAML' | apply_yaml
-apiVersion: cognilabz.com/v1alpha1
+apiVersion: cognilabz.com/v1beta1
 kind: SecretReference
 metadata:
   name: no-annotation
@@ -375,7 +375,7 @@ spec:
     - namespace: shared
       name: no-annotation
 ---
-apiVersion: cognilabz.com/v1alpha1
+apiVersion: cognilabz.com/v1beta1
 kind: SecretReference
 metadata:
   name: empty-annotation
@@ -385,7 +385,7 @@ spec:
     - namespace: shared
       name: empty-annotation
 ---
-apiVersion: cognilabz.com/v1alpha1
+apiVersion: cognilabz.com/v1beta1
 kind: SecretReference
 metadata:
   name: wildcard
@@ -410,7 +410,7 @@ scenario_fail_closed_and_recovery() {
   log "scenario: fail-closed deletion and recovery"
   k create namespace recovery
   cat <<'YAML' | apply_yaml
-apiVersion: cognilabz.com/v1alpha1
+apiVersion: cognilabz.com/v1beta1
 kind: SecretReference
 metadata:
   name: late-source
@@ -427,7 +427,7 @@ YAML
   wait_for_jsonpath recovery secret/late-source '{.data.value}' bGF0ZQ==
 
   cat <<'YAML' | apply_yaml
-apiVersion: cognilabz.com/v1alpha1
+apiVersion: cognilabz.com/v1beta1
 kind: SecretReference
 metadata:
   name: missing-key
@@ -458,7 +458,7 @@ scenario_conflicts_and_ownership() {
   k -n shared annotate secret database cognisecrets.cognilabz.com/allowed-namespaces=basic,conflict --overwrite
   k -n shared annotate secret messaging cognisecrets.cognilabz.com/allowed-namespaces=basic,conflict --overwrite
   cat <<'YAML' | apply_yaml
-apiVersion: cognilabz.com/v1alpha1
+apiVersion: cognilabz.com/v1beta1
 kind: SecretReference
 metadata:
   name: existing
@@ -472,7 +472,7 @@ YAML
   wait_for_jsonpath conflict secret/existing '{.data.keep}' dmFsdWU=
 
   cat <<'YAML' | apply_yaml
-apiVersion: cognilabz.com/v1alpha1
+apiVersion: cognilabz.com/v1beta1
 kind: SecretReference
 metadata:
   name: duplicate-cross-source
@@ -490,7 +490,7 @@ spec:
         - name: token
           target: DUP
 ---
-apiVersion: cognilabz.com/v1alpha1
+apiVersion: cognilabz.com/v1beta1
 kind: SecretReference
 metadata:
   name: duplicate-one-source
@@ -521,7 +521,7 @@ scenario_metadata_lifecycle_and_restart() {
   k -n shared annotate secret database cognisecrets.cognilabz.com/allowed-namespaces=basic,conflict,lifecycle --overwrite
   k -n shared annotate secret messaging cognisecrets.cognilabz.com/allowed-namespaces=basic,conflict,lifecycle --overwrite
   cat <<'YAML' | apply_yaml
-apiVersion: cognilabz.com/v1alpha1
+apiVersion: cognilabz.com/v1beta1
 kind: SecretReference
 metadata:
   name: mutable
@@ -553,7 +553,7 @@ YAML
   wait_for_absent lifecycle secret/mutable
 
   cat <<'YAML' | apply_yaml
-apiVersion: cognilabz.com/v1alpha1
+apiVersion: cognilabz.com/v1beta1
 kind: SecretReference
 metadata:
   name: type-change
@@ -578,7 +578,7 @@ YAML
   fi
 
   cat <<'YAML' | apply_yaml
-apiVersion: cognilabz.com/v1alpha1
+apiVersion: cognilabz.com/v1beta1
 kind: SecretReference
 metadata:
   name: target-rejected
@@ -598,7 +598,7 @@ YAML
   assert_no_secret_value_in_events lifecycle app2 s3cr3t
 
   cat <<'YAML' | apply_yaml
-apiVersion: cognilabz.com/v1alpha1
+apiVersion: cognilabz.com/v1beta1
 kind: SecretReference
 metadata:
   name: restart
@@ -622,7 +622,7 @@ scenario_chain_prevention() {
   k create namespace chain
   k -n shared annotate secret database cognisecrets.cognilabz.com/allowed-namespaces=basic,conflict,lifecycle,chain --overwrite
   cat <<'YAML' | apply_yaml
-apiVersion: cognilabz.com/v1alpha1
+apiVersion: cognilabz.com/v1beta1
 kind: SecretReference
 metadata:
   name: generated
@@ -635,7 +635,7 @@ YAML
   wait_for_jsonpath chain secretreference/generated '{.status.conditions[?(@.type=="Ready")].reason}' Synced
 
   cat <<'YAML' | apply_yaml
-apiVersion: cognilabz.com/v1alpha1
+apiVersion: cognilabz.com/v1beta1
 kind: SecretReference
 metadata:
   name: chained

@@ -111,7 +111,7 @@ Notes:
 
 - `WriteFailed` is covered by reference-implementation unit tests only because it represents operational write or delete failures that are not portable to reproduce in a black-box conformance suite.
 
-## 6. Phase 4: Alpha release
+## 6. Phase 4: Beta release
 
 Status: in progress
 
@@ -121,19 +121,21 @@ Goals:
 - publish CRD manifests;
 - publish installation instructions;
 - document known limitations;
-- tag first alpha release.
+- tag first beta release.
 
 Release procedure:
 
-- `docs/11-alpha-release.md`
+- `docs/11-beta-release.md`
 
 Exit criteria:
 
-- users can install CogniSecrets into a test cluster;
+- users can install CogniSecrets into a test or early production evaluation cluster;
 - examples work end to end;
-- README clearly states alpha status.
+- README clearly states beta status.
 
 ## 7. Phase 5: Hardening
+
+Status: in progress
 
 Goals:
 

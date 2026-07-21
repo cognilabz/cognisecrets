@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	cogniv1alpha1 "github.com/cognilabz/cognisecrets/api/v1alpha1"
+	cogniv1beta1 "github.com/cognilabz/cognisecrets/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,11 +23,11 @@ import (
 
 func TestReconcileCreatesComposedTarget(t *testing.T) {
 	ctx := context.Background()
-	ref := newReference("application", "application-credentials", []cogniv1alpha1.SecretSource{
+	ref := newReference("application", "application-credentials", []cogniv1beta1.SecretSource{
 		{
 			Namespace: "shared",
 			Name:      "database",
-			Keys: []cogniv1alpha1.SecretKeyMapping{
+			Keys: []cogniv1beta1.SecretKeyMapping{
 				{Name: "username"},
 				{Name: "password", Target: "DB_PASSWORD"},
 			},
@@ -53,18 +53,18 @@ func TestReconcileCreatesComposedTarget(t *testing.T) {
 	if target.Type != corev1.SecretTypeOpaque {
 		t.Fatalf("target type = %q, want %q", target.Type, corev1.SecretTypeOpaque)
 	}
-	if target.Labels[cogniv1alpha1.ManagedByLabel] != cogniv1alpha1.ManagedByValue {
+	if target.Labels[cogniv1beta1.ManagedByLabel] != cogniv1beta1.ManagedByValue {
 		t.Fatalf("managed-by label missing: %#v", target.Labels)
 	}
 	if !ownedBy(&target, ref) {
 		t.Fatalf("target Secret does not have controller owner reference for SecretReference")
 	}
-	assertReady(t, reconciler.Client, ctx, ref, metav1.ConditionTrue, cogniv1alpha1.ReasonSynced)
+	assertReady(t, reconciler.Client, ctx, ref, metav1.ConditionTrue, cogniv1beta1.ReasonSynced)
 }
 
 func TestReconcileReportsForeignTargetBeforeSourceErrors(t *testing.T) {
 	ctx := context.Background()
-	ref := newReference("application", "database", []cogniv1alpha1.SecretSource{{Namespace: "shared", Name: "missing"}})
+	ref := newReference("application", "database", []cogniv1beta1.SecretSource{{Namespace: "shared", Name: "missing"}})
 	foreign := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "database", Namespace: "application"},
 		Data:       map[string][]byte{"keep": []byte("me")},
@@ -78,12 +78,12 @@ func TestReconcileReportsForeignTargetBeforeSourceErrors(t *testing.T) {
 		t.Fatalf("expected foreign target to remain: %v", err)
 	}
 	assertData(t, target.Data, map[string][]byte{"keep": []byte("me")})
-	assertReady(t, reconciler.Client, ctx, ref, metav1.ConditionFalse, cogniv1alpha1.ReasonTargetAlreadyExists)
+	assertReady(t, reconciler.Client, ctx, ref, metav1.ConditionFalse, cogniv1beta1.ReasonTargetAlreadyExists)
 }
 
 func TestReconcileDeletesManagedTargetOnAccessDenied(t *testing.T) {
 	ctx := context.Background()
-	ref := newReference("application", "database", []cogniv1alpha1.SecretSource{{Namespace: "shared", Name: "database"}})
+	ref := newReference("application", "database", []cogniv1beta1.SecretSource{{Namespace: "shared", Name: "database"}})
 	source := newSource("shared", "database", "reporting", map[string][]byte{"password": []byte("secret")})
 	target := newManagedTarget(ref, map[string][]byte{"password": []byte("stale")})
 	reconciler := newTestReconciler(t, ref, source, target)
@@ -95,25 +95,25 @@ func TestReconcileDeletesManagedTargetOnAccessDenied(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected managed target to be deleted")
 	}
-	assertReady(t, reconciler.Client, ctx, ref, metav1.ConditionFalse, cogniv1alpha1.ReasonAccessDenied)
+	assertReady(t, reconciler.Client, ctx, ref, metav1.ConditionFalse, cogniv1beta1.ReasonAccessDenied)
 }
 
 func TestReconcileReportsSourceNotFound(t *testing.T) {
 	ctx := context.Background()
-	ref := newReference("application", "database", []cogniv1alpha1.SecretSource{{Namespace: "shared", Name: "database"}})
+	ref := newReference("application", "database", []cogniv1beta1.SecretSource{{Namespace: "shared", Name: "database"}})
 	reconciler := newTestReconciler(t, ref)
 
 	reconcileOnce(t, ctx, reconciler, ref)
 
-	assertReady(t, reconciler.Client, ctx, ref, metav1.ConditionFalse, cogniv1alpha1.ReasonSourceNotFound)
+	assertReady(t, reconciler.Client, ctx, ref, metav1.ConditionFalse, cogniv1beta1.ReasonSourceNotFound)
 }
 
 func TestReconcileDeletesManagedTargetOnMissingKey(t *testing.T) {
 	ctx := context.Background()
-	ref := newReference("application", "database", []cogniv1alpha1.SecretSource{{
+	ref := newReference("application", "database", []cogniv1beta1.SecretSource{{
 		Namespace: "shared",
 		Name:      "database",
-		Keys:      []cogniv1alpha1.SecretKeyMapping{{Name: "password"}},
+		Keys:      []cogniv1beta1.SecretKeyMapping{{Name: "password"}},
 	}})
 	source := newSource("shared", "database", "application", map[string][]byte{"username": []byte("app")})
 	target := newManagedTarget(ref, map[string][]byte{"password": []byte("stale")})
@@ -126,21 +126,21 @@ func TestReconcileDeletesManagedTargetOnMissingKey(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected managed target to be deleted")
 	}
-	assertReady(t, reconciler.Client, ctx, ref, metav1.ConditionFalse, cogniv1alpha1.ReasonSourceKeyNotFound)
+	assertReady(t, reconciler.Client, ctx, ref, metav1.ConditionFalse, cogniv1beta1.ReasonSourceKeyNotFound)
 }
 
 func TestReconcileRejectsDuplicateTargetKeyWithContributors(t *testing.T) {
 	ctx := context.Background()
-	ref := newReference("application", "database", []cogniv1alpha1.SecretSource{
+	ref := newReference("application", "database", []cogniv1beta1.SecretSource{
 		{
 			Namespace: "shared",
 			Name:      "database",
-			Keys:      []cogniv1alpha1.SecretKeyMapping{{Name: "password", Target: "PASSWORD"}},
+			Keys:      []cogniv1beta1.SecretKeyMapping{{Name: "password", Target: "PASSWORD"}},
 		},
 		{
 			Namespace: "shared",
 			Name:      "messaging",
-			Keys:      []cogniv1alpha1.SecretKeyMapping{{Name: "token", Target: "PASSWORD"}},
+			Keys:      []cogniv1beta1.SecretKeyMapping{{Name: "token", Target: "PASSWORD"}},
 		},
 	})
 	database := newSource("shared", "database", "application", map[string][]byte{"password": []byte("a")})
@@ -154,8 +154,8 @@ func TestReconcileRejectsDuplicateTargetKeyWithContributors(t *testing.T) {
 		t.Fatalf("expected no target Secret when duplicate target key exists")
 	}
 	condition := readyCondition(t, reconciler.Client, ctx, ref)
-	if condition.Reason != cogniv1alpha1.ReasonDuplicateTargetKey {
-		t.Fatalf("reason = %q, want %q", condition.Reason, cogniv1alpha1.ReasonDuplicateTargetKey)
+	if condition.Reason != cogniv1beta1.ReasonDuplicateTargetKey {
+		t.Fatalf("reason = %q, want %q", condition.Reason, cogniv1beta1.ReasonDuplicateTargetKey)
 	}
 	for _, want := range []string{"PASSWORD", "shared/database key password", "shared/messaging key token"} {
 		if !strings.Contains(condition.Message, want) {
@@ -166,7 +166,7 @@ func TestReconcileRejectsDuplicateTargetKeyWithContributors(t *testing.T) {
 
 func TestReconcileRejectsManagedSourceByOwnerReference(t *testing.T) {
 	ctx := context.Background()
-	ref := newReference("application", "database", []cogniv1alpha1.SecretSource{{Namespace: "shared", Name: "database"}})
+	ref := newReference("application", "database", []cogniv1beta1.SecretSource{{Namespace: "shared", Name: "database"}})
 	sourceOwner := newReference("shared", "database", nil)
 	source := newSource("shared", "database", "application", map[string][]byte{"password": []byte("secret")})
 	source.OwnerReferences = []metav1.OwnerReference{ownerRef(sourceOwner)}
@@ -174,12 +174,12 @@ func TestReconcileRejectsManagedSourceByOwnerReference(t *testing.T) {
 
 	reconcileOnce(t, ctx, reconciler, ref)
 
-	assertReady(t, reconciler.Client, ctx, ref, metav1.ConditionFalse, cogniv1alpha1.ReasonManagedSourceRejected)
+	assertReady(t, reconciler.Client, ctx, ref, metav1.ConditionFalse, cogniv1beta1.ReasonManagedSourceRejected)
 }
 
 func TestReconcilePreservesUnmanagedTargetMetadata(t *testing.T) {
 	ctx := context.Background()
-	ref := newReference("application", "database", []cogniv1alpha1.SecretSource{{Namespace: "shared", Name: "database"}})
+	ref := newReference("application", "database", []cogniv1beta1.SecretSource{{Namespace: "shared", Name: "database"}})
 	source := newSource("shared", "database", "application", map[string][]byte{"password": []byte("fresh")})
 	target := newManagedTarget(ref, map[string][]byte{"password": []byte("stale")})
 	target.Labels["custom"] = "label"
@@ -213,10 +213,10 @@ func TestReconcilePreservesUnmanagedTargetMetadata(t *testing.T) {
 
 func TestReconcileReplacesManagedTargetWhenTypeChanges(t *testing.T) {
 	ctx := context.Background()
-	ref := newReference("application", "database", []cogniv1alpha1.SecretSource{{
+	ref := newReference("application", "database", []cogniv1beta1.SecretSource{{
 		Namespace: "shared",
 		Name:      "database",
-		Keys: []cogniv1alpha1.SecretKeyMapping{
+		Keys: []cogniv1beta1.SecretKeyMapping{
 			{Name: "username"},
 			{Name: "password"},
 		},
@@ -254,12 +254,12 @@ func TestReconcileReplacesManagedTargetWhenTypeChanges(t *testing.T) {
 		"username": []byte("app"),
 		"password": []byte("secret"),
 	})
-	assertReady(t, reconciler.Client, ctx, ref, metav1.ConditionTrue, cogniv1alpha1.ReasonSynced)
+	assertReady(t, reconciler.Client, ctx, ref, metav1.ConditionTrue, cogniv1beta1.ReasonSynced)
 }
 
 func TestTargetRejectedDeletesExistingManagedTarget(t *testing.T) {
 	ctx := context.Background()
-	ref := newReference("application", "database", []cogniv1alpha1.SecretSource{{Namespace: "shared", Name: "database"}})
+	ref := newReference("application", "database", []cogniv1beta1.SecretSource{{Namespace: "shared", Name: "database"}})
 	target := newManagedTarget(ref, map[string][]byte{"password": []byte("stale")})
 	reconciler := newTestReconciler(t, ref, target)
 	err := apierrors.NewInvalid(schema.GroupKind{Group: "", Kind: "Secret"}, "database", field.ErrorList{
@@ -274,7 +274,7 @@ func TestTargetRejectedDeletesExistingManagedTarget(t *testing.T) {
 	if getErr := reconciler.Get(ctx, types.NamespacedName{Namespace: "application", Name: "database"}, &deleted); getErr == nil {
 		t.Fatalf("expected managed target to be deleted after TargetRejected")
 	}
-	assertReady(t, reconciler.Client, ctx, ref, metav1.ConditionFalse, cogniv1alpha1.ReasonTargetRejected)
+	assertReady(t, reconciler.Client, ctx, ref, metav1.ConditionFalse, cogniv1beta1.ReasonTargetRejected)
 }
 
 func TestAllowsNamespaceParsing(t *testing.T) {
@@ -295,13 +295,13 @@ func newTestReconciler(t *testing.T, objects ...client.Object) *SecretReferenceR
 	if err := clientgoscheme.AddToScheme(scheme); err != nil {
 		t.Fatalf("add client-go scheme: %v", err)
 	}
-	if err := cogniv1alpha1.AddToScheme(scheme); err != nil {
+	if err := cogniv1beta1.AddToScheme(scheme); err != nil {
 		t.Fatalf("add CogniSecrets scheme: %v", err)
 	}
 	return &SecretReferenceReconciler{
 		Client: fake.NewClientBuilder().
 			WithScheme(scheme).
-			WithStatusSubresource(&cogniv1alpha1.SecretReference{}).
+			WithStatusSubresource(&cogniv1beta1.SecretReference{}).
 			WithObjects(objects...).
 			Build(),
 		Scheme:   scheme,
@@ -309,7 +309,7 @@ func newTestReconciler(t *testing.T, objects ...client.Object) *SecretReferenceR
 	}
 }
 
-func reconcileOnce(t *testing.T, ctx context.Context, reconciler *SecretReferenceReconciler, ref *cogniv1alpha1.SecretReference) {
+func reconcileOnce(t *testing.T, ctx context.Context, reconciler *SecretReferenceReconciler, ref *cogniv1beta1.SecretReference) {
 	t.Helper()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Namespace: ref.Namespace, Name: ref.Name}})
 	if err != nil {
@@ -317,10 +317,10 @@ func reconcileOnce(t *testing.T, ctx context.Context, reconciler *SecretReferenc
 	}
 }
 
-func newReference(namespace, name string, sources []cogniv1alpha1.SecretSource) *cogniv1alpha1.SecretReference {
-	return &cogniv1alpha1.SecretReference{
+func newReference(namespace, name string, sources []cogniv1beta1.SecretSource) *cogniv1beta1.SecretReference {
+	return &cogniv1beta1.SecretReference{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: cogniv1alpha1.GroupVersion.String(),
+			APIVersion: cogniv1beta1.GroupVersion.String(),
 			Kind:       "SecretReference",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -329,7 +329,7 @@ func newReference(namespace, name string, sources []cogniv1alpha1.SecretSource) 
 			UID:        uuid.NewUUID(),
 			Generation: 1,
 		},
-		Spec: cogniv1alpha1.SecretReferenceSpec{
+		Spec: cogniv1beta1.SecretReferenceSpec{
 			Type:    corev1.SecretTypeOpaque,
 			Sources: sources,
 		},
@@ -342,7 +342,7 @@ func newSource(namespace, name, allowedNamespaces string, data map[string][]byte
 			Name:      name,
 			Namespace: namespace,
 			Annotations: map[string]string{
-				cogniv1alpha1.AuthorizationAnnotation: allowedNamespaces,
+				cogniv1beta1.AuthorizationAnnotation: allowedNamespaces,
 			},
 		},
 		Data: copySecretData(data),
@@ -350,13 +350,13 @@ func newSource(namespace, name, allowedNamespaces string, data map[string][]byte
 	}
 }
 
-func newManagedTarget(ref *cogniv1alpha1.SecretReference, data map[string][]byte) *corev1.Secret {
+func newManagedTarget(ref *cogniv1beta1.SecretReference, data map[string][]byte) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ref.Name,
 			Namespace: ref.Namespace,
 			Labels: map[string]string{
-				cogniv1alpha1.ManagedByLabel: cogniv1alpha1.ManagedByValue,
+				cogniv1beta1.ManagedByLabel: cogniv1beta1.ManagedByValue,
 			},
 			OwnerReferences: []metav1.OwnerReference{ownerRef(ref)},
 		},
@@ -365,7 +365,7 @@ func newManagedTarget(ref *cogniv1alpha1.SecretReference, data map[string][]byte
 	}
 }
 
-func assertReady(t *testing.T, c client.Client, ctx context.Context, ref *cogniv1alpha1.SecretReference, status metav1.ConditionStatus, reason string) {
+func assertReady(t *testing.T, c client.Client, ctx context.Context, ref *cogniv1beta1.SecretReference, status metav1.ConditionStatus, reason string) {
 	t.Helper()
 	condition := readyCondition(t, c, ctx, ref)
 	if condition.Status != status || condition.Reason != reason {
@@ -376,14 +376,14 @@ func assertReady(t *testing.T, c client.Client, ctx context.Context, ref *cogniv
 	}
 }
 
-func readyCondition(t *testing.T, c client.Client, ctx context.Context, ref *cogniv1alpha1.SecretReference) metav1.Condition {
+func readyCondition(t *testing.T, c client.Client, ctx context.Context, ref *cogniv1beta1.SecretReference) metav1.Condition {
 	t.Helper()
-	var current cogniv1alpha1.SecretReference
+	var current cogniv1beta1.SecretReference
 	if err := c.Get(ctx, types.NamespacedName{Namespace: ref.Namespace, Name: ref.Name}, &current); err != nil {
 		t.Fatalf("get SecretReference: %v", err)
 	}
 	for _, condition := range current.Status.Conditions {
-		if condition.Type == cogniv1alpha1.ReadyConditionType {
+		if condition.Type == cogniv1beta1.ReadyConditionType {
 			return condition
 		}
 	}
