@@ -84,7 +84,7 @@ Exit criteria:
 
 ## 5. Phase 3: Conformance suite
 
-Status: in progress
+Status: complete
 
 Goals:
 
@@ -107,7 +107,13 @@ Exit criteria:
 - controller restart and watch-driven synchronization are tested;
 - security-sensitive behavior is covered.
 
+Notes:
+
+- `WriteFailed` is covered by reference-implementation unit tests only because it represents operational write or delete failures that are not portable to reproduce in a black-box conformance suite.
+
 ## 6. Phase 4: Alpha release
+
+Status: in progress
 
 Goals:
 
