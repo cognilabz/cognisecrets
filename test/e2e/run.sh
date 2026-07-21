@@ -259,6 +259,18 @@ scenario_basic_sync_and_watches() {
     --from-literal=url=nats
   k -n shared annotate secret messaging \
     cognisecrets.cognilabz.com/allowed-namespaces=basic
+  cat <<'YAML' | apply_yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: binary
+  namespace: shared
+  annotations:
+    cognisecrets.cognilabz.com/allowed-namespaces: basic
+type: Opaque
+data:
+  bytes: AP8Q
+YAML
 
   cat <<'YAML' | apply_yaml
 apiVersion: cognilabz.com/v1alpha1
@@ -277,6 +289,23 @@ YAML
   assert_jsonpath basic secret/all-keys '{.data.password}' czNjcjN0
   assert_jsonpath basic secret/all-keys '{.metadata.labels.app\.kubernetes\.io/managed-by}' cognisecrets
   assert_jsonpath basic secret/all-keys '{.metadata.ownerReferences[0].controller}' true
+
+  cat <<'YAML' | apply_yaml
+apiVersion: cognilabz.com/v1alpha1
+kind: SecretReference
+metadata:
+  name: binary-copy
+  namespace: basic
+spec:
+  sources:
+    - namespace: shared
+      name: binary
+      keys:
+        - name: bytes
+          target: raw
+YAML
+  wait_for_jsonpath basic secretreference/binary-copy '{.status.conditions[?(@.type=="Ready")].reason}' Synced
+  assert_jsonpath basic secret/binary-copy '{.data.raw}' AP8Q
 
   local secret_rv_before status_rv_before
   secret_rv_before="$(resource_version basic secret/all-keys)"

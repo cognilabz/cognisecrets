@@ -10,15 +10,15 @@ Legend:
 
 ## API Validation
 
-- `[ ]` reject `SecretReference` without `spec.sources`
-- `[ ]` reject empty `spec.sources`
-- `[ ]` reject source without `namespace`
-- `[ ]` reject source without `name`
-- `[ ]` reject empty `keys` list when present
-- `[ ]` reject key mapping without `name`
+- `[x]` reject `SecretReference` without `spec.sources`
+- `[x]` reject empty `spec.sources`
+- `[x]` reject source without `namespace`
+- `[x]` reject source without `name`
+- `[x]` reject empty `keys` list when present
+- `[x]` reject key mapping without `name`
 - `[x]` default omitted `spec.type` to `Opaque` at the API level
 - `[x]` resolve omitted `keys[].target` as `keys[].name` during controller composition
-- `[ ]` reject unknown fields under `spec`
+- `[x]` reject unknown fields under `spec`
 
 ## Basic Synchronization
 
@@ -28,7 +28,7 @@ Legend:
 - `[x]` copy one source key to multiple distinct target keys
 - `[x]` compose keys from multiple authorized sources
 - `[x]` update target Secret when source data changes
-- `[u]` copy source `data` values byte-for-byte without UTF-8 assumptions
+- `[x]` copy source `data` values byte-for-byte without UTF-8 assumptions
 - `[x]` ignore source `type` during composition
 - `[x]` avoid updating target Secret when managed fields are unchanged
 - `[x]` avoid updating status when the `Ready` condition is unchanged, including `observedGeneration`
@@ -122,4 +122,3 @@ Every E2E scenario that asserts status messages must also ensure secret values a
 ## Remaining Known Gaps
 
 - `WriteFailed` is operational-failure behavior and remains unit-test-only.
-- Arbitrary-byte data copying is unit-tested; E2E currently uses printable literal values.
