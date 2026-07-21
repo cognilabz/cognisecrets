@@ -123,6 +123,10 @@ Goals:
 - document known limitations;
 - tag first alpha release.
 
+Release procedure:
+
+- `docs/11-alpha-release.md`
+
 Exit criteria:
 
 - users can install CogniSecrets into a test cluster;

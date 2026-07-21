@@ -37,6 +37,7 @@ CogniSecrets is not a vault, secret store, encryption solution, rotation system,
 8. [Conformance test specification](docs/08-conformance-test-specification.md)
 9. [Roadmap](docs/09-roadmap.md)
 10. [E2E test concept](docs/10-e2e-test-concept.md)
+11. [Alpha release](docs/11-alpha-release.md)
 
 ## Install
 
@@ -47,11 +48,18 @@ make render | kubectl apply -f -
 kubectl -n cognisecrets-system rollout status deployment/cognisecrets-controller-manager
 ```
 
-The default deployment uses `ghcr.io/cognilabz/cognisecrets:latest`. For local testing, build and load an image into your cluster, then replace the image in the rendered manifests:
+The default deployment uses `ghcr.io/cognilabz/cognisecrets:latest`. To render manifests for a specific image tag:
 
 ```sh
-docker build -t ghcr.io/cognilabz/cognisecrets:latest .
-make render | kubectl apply -f -
+make render IMG=ghcr.io/cognilabz/cognisecrets:v0.1.0-alpha.1 | kubectl apply -f -
+```
+
+For local kind testing, build and load a local image before applying manifests:
+
+```sh
+make docker-build IMG=ghcr.io/cognilabz/cognisecrets:dev
+kind load docker-image ghcr.io/cognilabz/cognisecrets:dev
+make render IMG=ghcr.io/cognilabz/cognisecrets:dev | kubectl apply -f -
 ```
 
 ## Example
@@ -116,6 +124,12 @@ Build the controller image:
 
 ```sh
 make docker-build
+```
+
+Generate a versioned alpha install manifest:
+
+```sh
+make release-manifest VERSION=v0.1.0-alpha.1
 ```
 
 ## License

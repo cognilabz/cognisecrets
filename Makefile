@@ -3,6 +3,9 @@ SHELL := /usr/bin/env bash
 LOCALBIN ?= $(CURDIR)/bin
 GO_TOOLCHAIN ?= go1.26.5
 GOTOOLCHAIN_ENV := GOTOOLCHAIN=$(GO_TOOLCHAIN)
+IMG ?= ghcr.io/cognilabz/cognisecrets:latest
+VERSION ?= v0.1.0-alpha.1
+DIST_DIR ?= dist
 
 KUBEBUILDER ?= $(LOCALBIN)/kubebuilder
 KUBEBUILDER_VERSION ?= v4.15.0
@@ -42,11 +45,20 @@ build:
 
 .PHONY: docker-build
 docker-build:
-	docker build -t ghcr.io/cognilabz/cognisecrets:latest .
+	docker build -t $(IMG) .
+
+.PHONY: docker-push
+docker-push:
+	docker push $(IMG)
 
 .PHONY: render
 render: $(KUSTOMIZE)
-	$(KUSTOMIZE) build config/default
+	$(KUSTOMIZE) build config/default | sed "s#ghcr.io/cognilabz/cognisecrets:latest#$(IMG)#g"
+
+.PHONY: release-manifest
+release-manifest: $(KUSTOMIZE)
+	mkdir -p $(DIST_DIR)
+	$(KUSTOMIZE) build config/default | sed "s#ghcr.io/cognilabz/cognisecrets:latest#ghcr.io/cognilabz/cognisecrets:$(VERSION)#g" > $(DIST_DIR)/cognisecrets-$(VERSION).yaml
 
 .PHONY: e2e
 e2e: $(KUSTOMIZE)
