@@ -12,6 +12,6 @@ resources:
   domain: cognilabz.com
   group: cognilabz
   kind: SecretReference
-  path: github.com/cognilabz/cognisecrets/api/v1beta1
-  version: v1beta1
+  path: github.com/cognilabz/cognisecrets/api/v1
+  version: v1
 version: "3"

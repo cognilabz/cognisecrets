@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	cogniv1beta1 "github.com/cognilabz/cognisecrets/api/v1beta1"
+	cogniv1 "github.com/cognilabz/cognisecrets/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -53,7 +53,7 @@ type valueContributor struct {
 func (r *SecretReferenceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	var ref cogniv1beta1.SecretReference
+	var ref cogniv1.SecretReference
 	if err := r.Get(ctx, req.NamespacedName, &ref); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -63,7 +63,7 @@ func (r *SecretReferenceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	targetExists := true
 	if err := r.Get(ctx, targetKey, &target); err != nil {
 		if !apierrors.IsNotFound(err) {
-			result, statusErr := r.setFailure(ctx, &ref, cogniv1beta1.ReasonWriteFailed, fmt.Sprintf("failed to read target Secret %s/%s: %v", ref.Namespace, ref.Name, err))
+			result, statusErr := r.setFailure(ctx, &ref, cogniv1.ReasonWriteFailed, fmt.Sprintf("failed to read target Secret %s/%s: %v", ref.Namespace, ref.Name, err))
 			return result, firstErr(err, statusErr)
 		}
 		targetExists = false
@@ -71,8 +71,8 @@ func (r *SecretReferenceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	if targetExists && !ownedBy(&target, &ref) {
 		msg := fmt.Sprintf("target Secret %s/%s already exists and is not owned by SecretReference %s/%s", ref.Namespace, ref.Name, ref.Namespace, ref.Name)
-		r.event(&ref, corev1.EventTypeWarning, cogniv1beta1.ReasonTargetAlreadyExists, msg)
-		return r.setFailure(ctx, &ref, cogniv1beta1.ReasonTargetAlreadyExists, msg)
+		r.event(&ref, corev1.EventTypeWarning, cogniv1.ReasonTargetAlreadyExists, msg)
+		return r.setFailure(ctx, &ref, cogniv1.ReasonTargetAlreadyExists, msg)
 	}
 
 	desired, failure := r.desiredTarget(ctx, &ref)
@@ -80,8 +80,8 @@ func (r *SecretReferenceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		if targetExists {
 			if err := r.Delete(ctx, &target); err != nil && !apierrors.IsNotFound(err) {
 				msg := fmt.Sprintf("failed to delete managed target Secret %s/%s after %s: %v", ref.Namespace, ref.Name, failure.reason, err)
-				r.event(&ref, corev1.EventTypeWarning, cogniv1beta1.ReasonWriteFailed, msg)
-				result, statusErr := r.setFailure(ctx, &ref, cogniv1beta1.ReasonWriteFailed, msg)
+				r.event(&ref, corev1.EventTypeWarning, cogniv1.ReasonWriteFailed, msg)
+				result, statusErr := r.setFailure(ctx, &ref, cogniv1.ReasonWriteFailed, msg)
 				return result, firstErr(err, statusErr)
 			}
 			r.event(&ref, corev1.EventTypeWarning, failure.reason, fmt.Sprintf("deleted managed target Secret %s/%s: %s", ref.Namespace, ref.Name, failure.message))
@@ -109,8 +109,8 @@ func (r *SecretReferenceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 		if err := r.Delete(ctx, &target); err != nil && !apierrors.IsNotFound(err) {
 			msg := fmt.Sprintf("failed to replace managed target Secret %s/%s after type change: %v", ref.Namespace, ref.Name, err)
-			r.event(&ref, corev1.EventTypeWarning, cogniv1beta1.ReasonWriteFailed, msg)
-			result, statusErr := r.setFailure(ctx, &ref, cogniv1beta1.ReasonWriteFailed, msg)
+			r.event(&ref, corev1.EventTypeWarning, cogniv1.ReasonWriteFailed, msg)
+			result, statusErr := r.setFailure(ctx, &ref, cogniv1.ReasonWriteFailed, msg)
 			return result, firstErr(err, statusErr)
 		}
 		r.event(&ref, corev1.EventTypeNormal, "TargetReplacing", fmt.Sprintf("deleted target Secret %s/%s to replace immutable type", ref.Namespace, ref.Name))
@@ -128,7 +128,7 @@ func (r *SecretReferenceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return r.setReady(ctx, &ref)
 }
 
-func (r *SecretReferenceReconciler) desiredTarget(ctx context.Context, ref *cogniv1beta1.SecretReference) (*corev1.Secret, *compositionFailure) {
+func (r *SecretReferenceReconciler) desiredTarget(ctx context.Context, ref *cogniv1.SecretReference) (*corev1.Secret, *compositionFailure) {
 	data := map[string][]byte{}
 	contributors := map[string]valueContributor{}
 
@@ -137,24 +137,24 @@ func (r *SecretReferenceReconciler) desiredTarget(ctx context.Context, ref *cogn
 		key := types.NamespacedName{Namespace: sourceRef.Namespace, Name: sourceRef.Name}
 		if err := r.Get(ctx, key, &source); err != nil {
 			if apierrors.IsNotFound(err) {
-				return nil, fail(cogniv1beta1.ReasonSourceNotFound, "source Secret %s/%s does not exist", sourceRef.Namespace, sourceRef.Name)
+				return nil, fail(cogniv1.ReasonSourceNotFound, "source Secret %s/%s does not exist", sourceRef.Namespace, sourceRef.Name)
 			}
-			return nil, fail(cogniv1beta1.ReasonWriteFailed, "failed to read source Secret %s/%s: %v", sourceRef.Namespace, sourceRef.Name, err)
+			return nil, fail(cogniv1.ReasonWriteFailed, "failed to read source Secret %s/%s: %v", sourceRef.Namespace, sourceRef.Name, err)
 		}
 
 		if isManagedSource(&source) {
-			return nil, fail(cogniv1beta1.ReasonManagedSourceRejected, "source Secret %s/%s is managed by CogniSecrets", sourceRef.Namespace, sourceRef.Name)
+			return nil, fail(cogniv1.ReasonManagedSourceRejected, "source Secret %s/%s is managed by CogniSecrets", sourceRef.Namespace, sourceRef.Name)
 		}
 
-		if !allowsNamespace(source.Annotations[cogniv1beta1.AuthorizationAnnotation], ref.Namespace) {
-			return nil, fail(cogniv1beta1.ReasonAccessDenied, "source Secret %s/%s does not authorize namespace %s", sourceRef.Namespace, sourceRef.Name, ref.Namespace)
+		if !allowsNamespace(source.Annotations[cogniv1.AuthorizationAnnotation], ref.Namespace) {
+			return nil, fail(cogniv1.ReasonAccessDenied, "source Secret %s/%s does not authorize namespace %s", sourceRef.Namespace, sourceRef.Name, ref.Namespace)
 		}
 
 		mappings := resolvedMappings(sourceRef, source.Data)
 		for _, mapping := range mappings {
 			value, ok := source.Data[mapping.Name]
 			if !ok {
-				return nil, fail(cogniv1beta1.ReasonSourceKeyNotFound, "source Secret %s/%s does not contain key %s", sourceRef.Namespace, sourceRef.Name, mapping.Name)
+				return nil, fail(cogniv1.ReasonSourceKeyNotFound, "source Secret %s/%s does not contain key %s", sourceRef.Namespace, sourceRef.Name, mapping.Name)
 			}
 			targetKey := mapping.Target
 			if targetKey == "" {
@@ -167,7 +167,7 @@ func (r *SecretReferenceReconciler) desiredTarget(ctx context.Context, ref *cogn
 				targetKey:       targetKey,
 			}
 			if previous, exists := contributors[targetKey]; exists {
-				return nil, fail(cogniv1beta1.ReasonDuplicateTargetKey, "target key %s is produced by %s/%s key %s and %s/%s key %s", targetKey, previous.sourceNamespace, previous.sourceName, previous.sourceKey, current.sourceNamespace, current.sourceName, current.sourceKey)
+				return nil, fail(cogniv1.ReasonDuplicateTargetKey, "target key %s is produced by %s/%s key %s and %s/%s key %s", targetKey, previous.sourceNamespace, previous.sourceName, previous.sourceKey, current.sourceNamespace, current.sourceName, current.sourceKey)
 			}
 			contributors[targetKey] = current
 			data[targetKey] = append([]byte(nil), value...)
@@ -183,7 +183,7 @@ func (r *SecretReferenceReconciler) desiredTarget(ctx context.Context, ref *cogn
 			Name:      ref.Name,
 			Namespace: ref.Namespace,
 			Labels: map[string]string{
-				cogniv1beta1.ManagedByLabel: cogniv1beta1.ManagedByValue,
+				cogniv1.ManagedByLabel: cogniv1.ManagedByValue,
 			},
 			OwnerReferences: []metav1.OwnerReference{ownerRef(ref)},
 		},
@@ -193,7 +193,7 @@ func (r *SecretReferenceReconciler) desiredTarget(ctx context.Context, ref *cogn
 	return secret, nil
 }
 
-func resolvedMappings(source cogniv1beta1.SecretSource, data map[string][]byte) []cogniv1beta1.SecretKeyMapping {
+func resolvedMappings(source cogniv1.SecretSource, data map[string][]byte) []cogniv1.SecretKeyMapping {
 	if len(source.Keys) > 0 {
 		return source.Keys
 	}
@@ -202,9 +202,9 @@ func resolvedMappings(source cogniv1beta1.SecretSource, data map[string][]byte) 
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
-	mappings := make([]cogniv1beta1.SecretKeyMapping, 0, len(keys))
+	mappings := make([]cogniv1.SecretKeyMapping, 0, len(keys))
 	for _, key := range keys {
-		mappings = append(mappings, cogniv1beta1.SecretKeyMapping{Name: key, Target: key})
+		mappings = append(mappings, cogniv1.SecretKeyMapping{Name: key, Target: key})
 	}
 	return mappings
 }
@@ -244,26 +244,26 @@ func isDNSLabel(value string) bool {
 
 func isManagedSource(secret *corev1.Secret) bool {
 	for _, ref := range secret.OwnerReferences {
-		if ref.Controller != nil && *ref.Controller && ref.APIVersion == cogniv1beta1.GroupVersion.String() && ref.Kind == "SecretReference" {
+		if ref.Controller != nil && *ref.Controller && ref.APIVersion == cogniv1.GroupVersion.String() && ref.Kind == "SecretReference" {
 			return true
 		}
 	}
 	return false
 }
 
-func ownedBy(secret *corev1.Secret, ref *cogniv1beta1.SecretReference) bool {
+func ownedBy(secret *corev1.Secret, ref *cogniv1.SecretReference) bool {
 	for _, ownerRef := range secret.OwnerReferences {
-		if ownerRef.Controller != nil && *ownerRef.Controller && ownerRef.APIVersion == cogniv1beta1.GroupVersion.String() && ownerRef.Kind == "SecretReference" && ownerRef.UID == ref.UID {
+		if ownerRef.Controller != nil && *ownerRef.Controller && ownerRef.APIVersion == cogniv1.GroupVersion.String() && ownerRef.Kind == "SecretReference" && ownerRef.UID == ref.UID {
 			return true
 		}
 	}
 	return false
 }
 
-func ownerRef(ref *cogniv1beta1.SecretReference) metav1.OwnerReference {
+func ownerRef(ref *cogniv1.SecretReference) metav1.OwnerReference {
 	controller := true
 	return metav1.OwnerReference{
-		APIVersion: cogniv1beta1.GroupVersion.String(),
+		APIVersion: cogniv1.GroupVersion.String(),
 		Kind:       "SecretReference",
 		Name:       ref.Name,
 		UID:        ref.UID,
@@ -275,19 +275,19 @@ func managedFieldsEqual(current, desired *corev1.Secret) bool {
 	if current.Type != desired.Type || !reflect.DeepEqual(current.Data, desired.Data) {
 		return false
 	}
-	if current.Labels[cogniv1beta1.ManagedByLabel] != cogniv1beta1.ManagedByValue {
+	if current.Labels[cogniv1.ManagedByLabel] != cogniv1.ManagedByValue {
 		return false
 	}
 	return hasOwnerRef(current.OwnerReferences, desired.OwnerReferences[0])
 }
 
-func applyManagedFields(target, desired *corev1.Secret, ref *cogniv1beta1.SecretReference) {
+func applyManagedFields(target, desired *corev1.Secret, ref *cogniv1.SecretReference) {
 	target.Type = desired.Type
 	target.Data = copySecretData(desired.Data)
 	if target.Labels == nil {
 		target.Labels = map[string]string{}
 	}
-	target.Labels[cogniv1beta1.ManagedByLabel] = cogniv1beta1.ManagedByValue
+	target.Labels[cogniv1.ManagedByLabel] = cogniv1.ManagedByValue
 	target.OwnerReferences = withOwnOwnerRef(target.OwnerReferences, ownerRef(ref))
 }
 
@@ -324,15 +324,15 @@ func fail(reason, format string, args ...any) *compositionFailure {
 	return &compositionFailure{reason: reason, message: fmt.Sprintf(format, args...)}
 }
 
-func (r *SecretReferenceReconciler) handleTargetWriteFailure(ctx context.Context, ref *cogniv1beta1.SecretReference, current *corev1.Secret, err error) (ctrl.Result, error) {
-	reason := cogniv1beta1.ReasonWriteFailed
+func (r *SecretReferenceReconciler) handleTargetWriteFailure(ctx context.Context, ref *cogniv1.SecretReference, current *corev1.Secret, err error) (ctrl.Result, error) {
+	reason := cogniv1.ReasonWriteFailed
 	if apierrors.IsInvalid(err) {
-		reason = cogniv1beta1.ReasonTargetRejected
+		reason = cogniv1.ReasonTargetRejected
 		if current != nil {
 			if deleteErr := r.Delete(ctx, current); deleteErr != nil && !apierrors.IsNotFound(deleteErr) {
 				msg := fmt.Sprintf("failed to delete managed target Secret %s/%s after TargetRejected: %v", ref.Namespace, ref.Name, deleteErr)
-				r.event(ref, corev1.EventTypeWarning, cogniv1beta1.ReasonWriteFailed, msg)
-				result, statusErr := r.setFailure(ctx, ref, cogniv1beta1.ReasonWriteFailed, msg)
+				r.event(ref, corev1.EventTypeWarning, cogniv1.ReasonWriteFailed, msg)
+				result, statusErr := r.setFailure(ctx, ref, cogniv1.ReasonWriteFailed, msg)
 				return result, firstErr(deleteErr, statusErr)
 			}
 		}
@@ -343,19 +343,19 @@ func (r *SecretReferenceReconciler) handleTargetWriteFailure(ctx context.Context
 	return result, firstErr(err, statusErr)
 }
 
-func (r *SecretReferenceReconciler) setReady(ctx context.Context, ref *cogniv1beta1.SecretReference) (ctrl.Result, error) {
+func (r *SecretReferenceReconciler) setReady(ctx context.Context, ref *cogniv1.SecretReference) (ctrl.Result, error) {
 	return r.setCondition(ctx, ref, metav1.Condition{
-		Type:               cogniv1beta1.ReadyConditionType,
+		Type:               cogniv1.ReadyConditionType,
 		Status:             metav1.ConditionTrue,
-		Reason:             cogniv1beta1.ReasonSynced,
+		Reason:             cogniv1.ReasonSynced,
 		Message:            "Target Secret is synchronized",
 		ObservedGeneration: ref.Generation,
 	})
 }
 
-func (r *SecretReferenceReconciler) setFailure(ctx context.Context, ref *cogniv1beta1.SecretReference, reason, message string) (ctrl.Result, error) {
+func (r *SecretReferenceReconciler) setFailure(ctx context.Context, ref *cogniv1.SecretReference, reason, message string) (ctrl.Result, error) {
 	return r.setCondition(ctx, ref, metav1.Condition{
-		Type:               cogniv1beta1.ReadyConditionType,
+		Type:               cogniv1.ReadyConditionType,
 		Status:             metav1.ConditionFalse,
 		Reason:             reason,
 		Message:            message,
@@ -363,7 +363,7 @@ func (r *SecretReferenceReconciler) setFailure(ctx context.Context, ref *cogniv1
 	})
 }
 
-func (r *SecretReferenceReconciler) setCondition(ctx context.Context, ref *cogniv1beta1.SecretReference, condition metav1.Condition) (ctrl.Result, error) {
+func (r *SecretReferenceReconciler) setCondition(ctx context.Context, ref *cogniv1.SecretReference, condition metav1.Condition) (ctrl.Result, error) {
 	current := ref.DeepCopy()
 	meta.SetStatusCondition(&ref.Status.Conditions, condition)
 	if reflect.DeepEqual(current.Status.Conditions, ref.Status.Conditions) {
@@ -375,15 +375,15 @@ func (r *SecretReferenceReconciler) setCondition(ctx context.Context, ref *cogni
 	return ctrl.Result{}, nil
 }
 
-func (r *SecretReferenceReconciler) event(ref *cogniv1beta1.SecretReference, eventType, reason, message string) {
+func (r *SecretReferenceReconciler) event(ref *cogniv1.SecretReference, eventType, reason, message string) {
 	if r.Recorder != nil {
 		r.Recorder.Event(ref, eventType, reason, message)
 	}
 }
 
 func (r *SecretReferenceReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &cogniv1beta1.SecretReference{}, sourceSecretIndexField, func(obj client.Object) []string {
-		ref := obj.(*cogniv1beta1.SecretReference)
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &cogniv1.SecretReference{}, sourceSecretIndexField, func(obj client.Object) []string {
+		ref := obj.(*cogniv1.SecretReference)
 		keys := make([]string, 0, len(ref.Spec.Sources))
 		seen := map[string]struct{}{}
 		for _, source := range ref.Spec.Sources {
@@ -400,14 +400,14 @@ func (r *SecretReferenceReconciler) SetupWithManager(ctx context.Context, mgr ct
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&cogniv1beta1.SecretReference{}).
+		For(&cogniv1.SecretReference{}).
 		Owns(&corev1.Secret{}).
 		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.referencesForSource)).
 		Complete(r)
 }
 
 func (r *SecretReferenceReconciler) referencesForSource(ctx context.Context, obj client.Object) []reconcile.Request {
-	var refs cogniv1beta1.SecretReferenceList
+	var refs cogniv1.SecretReferenceList
 	indexKey := obj.GetNamespace() + "/" + obj.GetName()
 	if err := r.List(ctx, &refs, client.MatchingFields{sourceSecretIndexField: indexKey}); err != nil {
 		return nil

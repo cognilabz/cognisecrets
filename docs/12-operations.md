@@ -1,6 +1,6 @@
 # Operations
 
-This document describes the operational checks and diagnostics expected for beta CogniSecrets releases.
+This document describes the operational checks and diagnostics expected for CogniSecrets releases.
 
 ## 1. Install Verification
 
@@ -97,9 +97,9 @@ The managed-by label is not used as a security proof. The controller treats a ta
 
 Cluster operators MUST protect write access to source Secrets and to the authorization annotation.
 
-## 6. Beta Operational Gate
+## 6. Release Operational Gate
 
-Before a beta release, maintainers MUST verify:
+Before a release, maintainers MUST verify:
 
 - the default deployment rolls out successfully;
 - liveness and readiness probes are present;

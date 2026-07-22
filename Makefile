@@ -4,7 +4,7 @@ LOCALBIN ?= $(CURDIR)/bin
 GO_TOOLCHAIN ?= go1.26.5
 GOTOOLCHAIN_ENV := GOTOOLCHAIN=$(GO_TOOLCHAIN)
 IMG ?= ghcr.io/cognilabz/cognisecrets:latest
-VERSION ?= v0.2.0-beta.1
+VERSION ?= v0.1.0
 DIST_DIR ?= dist
 
 KUBEBUILDER ?= $(LOCALBIN)/kubebuilder
@@ -38,9 +38,6 @@ test:
 .PHONY: release-gate
 release-gate: verify-generate test verify-render build e2e
 	git diff --check
-
-.PHONY: beta-gate
-beta-gate: release-gate
 
 .PHONY: verify-render
 verify-render: $(KUSTOMIZE)

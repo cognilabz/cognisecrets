@@ -23,19 +23,19 @@ cognilabz.com
 Initial version:
 
 ```text
-v1beta1
+v1
 ```
 
 The first implementation MUST use:
 
 ```yaml
-apiVersion: cognilabz.com/v1beta1
+apiVersion: cognilabz.com/v1
 kind: SecretReference
 ```
 
-The `v1beta1` version is the beta API version for CogniSecrets.
+The `v1` version is the release API version for CogniSecrets.
 
-Beta releases SHOULD preserve compatible `v1beta1` behavior unless release notes explicitly document an incompatible change and migration path.
+Releases MUST preserve compatible `v1` behavior unless release notes explicitly document an incompatible change and migration path.
 
 ## 3. Resource identity
 
@@ -55,7 +55,7 @@ The API MUST NOT support a separate target namespace or target name in V1.
 Canonical shape:
 
 ```yaml
-apiVersion: cognilabz.com/v1beta1
+apiVersion: cognilabz.com/v1
 kind: SecretReference
 metadata:
   name: application-credentials
@@ -250,7 +250,7 @@ The controller MUST validate:
 ### 9.1 Copy all keys from one source
 
 ```yaml
-apiVersion: cognilabz.com/v1beta1
+apiVersion: cognilabz.com/v1
 kind: SecretReference
 metadata:
   name: database
@@ -264,7 +264,7 @@ spec:
 ### 9.2 Select and rename keys
 
 ```yaml
-apiVersion: cognilabz.com/v1beta1
+apiVersion: cognilabz.com/v1
 kind: SecretReference
 metadata:
   name: application-credentials
@@ -284,7 +284,7 @@ spec:
 ### 9.3 Compose multiple sources
 
 ```yaml
-apiVersion: cognilabz.com/v1beta1
+apiVersion: cognilabz.com/v1
 kind: SecretReference
 metadata:
   name: application-config

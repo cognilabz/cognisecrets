@@ -4,7 +4,7 @@ import (
 	"flag"
 	"os"
 
-	cogniv1beta1 "github.com/cognilabz/cognisecrets/api/v1beta1"
+	cogniv1 "github.com/cognilabz/cognisecrets/api/v1"
 	cognicontroller "github.com/cognilabz/cognisecrets/internal/controller"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -19,7 +19,7 @@ var scheme = runtime.NewScheme()
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(cogniv1beta1.AddToScheme(scheme))
+	utilruntime.Must(cogniv1.AddToScheme(scheme))
 }
 
 func main() {

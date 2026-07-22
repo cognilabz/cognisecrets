@@ -74,7 +74,7 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: cognisecrets
   ownerReferences:
-    - apiVersion: cognilabz.com/v1beta1
+    - apiVersion: cognilabz.com/v1
       kind: SecretReference
       name: <SecretReference name>
       uid: <SecretReference uid>

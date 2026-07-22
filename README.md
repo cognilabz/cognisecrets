@@ -8,7 +8,7 @@ It adds exactly one capability to Kubernetes: explicit, authorized Secret compos
 
 ## Status
 
-CogniSecrets is beta software.
+CogniSecrets is release software.
 
 The Go reference implementation includes the `SecretReference` API, generated CRD, controller manager, RBAC, install manifests, samples, unit tests, and a local kind E2E conformance suite.
 
@@ -37,9 +37,9 @@ CogniSecrets is not a vault, secret store, encryption solution, rotation system,
 8. [Conformance test specification](docs/08-conformance-test-specification.md)
 9. [Roadmap](docs/09-roadmap.md)
 10. [E2E test concept](docs/10-e2e-test-concept.md)
-11. [Beta release](docs/11-beta-release.md)
+11. [Release](docs/11-release.md)
 12. [Operations](docs/12-operations.md)
-13. [v0.2.0-beta.1 release notes](docs/release-notes/v0.2.0-beta.1.md)
+13. [v0.1.0 release notes](docs/release-notes/v0.1.0.md)
 
 ## Install
 
@@ -53,7 +53,7 @@ kubectl -n cognisecrets-system rollout status deployment/cognisecrets-controller
 The default deployment uses `ghcr.io/cognilabz/cognisecrets:latest`. To render manifests for a specific image tag:
 
 ```sh
-make render IMG=ghcr.io/cognilabz/cognisecrets:v0.2.0-beta.1 | kubectl apply -f -
+make render IMG=ghcr.io/cognilabz/cognisecrets:v0.1.0 | kubectl apply -f -
 ```
 
 For local kind testing, build and load a local image before applying manifests:
@@ -87,7 +87,7 @@ kubectl -n shared annotate secret database \
 Apply a `SecretReference`:
 
 ```sh
-kubectl apply -f config/samples/cognilabz_v1beta1_secretreference_renamed_keys.yaml
+kubectl apply -f config/samples/cognilabz_v1_secretreference_renamed_keys.yaml
 ```
 
 Inspect the generated target Secret and status:
@@ -99,7 +99,7 @@ kubectl -n application get secret application-credentials -o yaml
 
 ## Known Limitations
 
-- Beta releases are intended for test and early production evaluation clusters.
+- `v0.1.0` is the first non-alpha release.
 - `WriteFailed` conformance is unit-tested only because it represents operational Kubernetes write or delete failures that are not portable to force in black-box E2E tests.
 
 ## Development
@@ -116,10 +116,10 @@ Run the local kind E2E smoke suite:
 make e2e
 ```
 
-Run the full beta local gate:
+Run the full release gate:
 
 ```sh
-make beta-gate
+make release-gate
 ```
 
 Render install manifests:
@@ -134,10 +134,10 @@ Build the controller image:
 make docker-build
 ```
 
-Generate a versioned beta install manifest:
+Generate a versioned release install manifest:
 
 ```sh
-make release-manifest VERSION=v0.2.0-beta.1
+make release-manifest VERSION=v0.1.0
 ```
 
 ## License
