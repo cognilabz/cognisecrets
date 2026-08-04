@@ -104,6 +104,7 @@ Every E2E scenario that asserts status messages must also ensure secret values a
 - `[x]` source Secret annotation update enqueues dependent `SecretReference`
 - `[x]` unrelated Secret update does not require dependent target changes
 - `[x]` multiple references to one source are reconciled after source update
+- `[x]` one source Secret update reconciles multiple dependent references across multiple namespaces
 
 ## Multi-Source Conflicts
 
@@ -118,6 +119,13 @@ Every E2E scenario that asserts status messages must also ensure secret values a
 - `[x]` Kubernetes API rejection is surfaced as `TargetRejected` where reproducible
 - `[x]` resource version does not change after no-op reconcile
 - `[x]` target Secret remains valid after unrelated metadata mutation
+
+## Scale And Retry Gate
+
+- `[x]` fan-out synchronization across 12 namespaces and 36 dependent `SecretReference` resources
+- `[x]` source Secret update converges across all fan-out targets
+- `[x]` no-op reconcile avoids unnecessary target Secret writes
+- `[x]` controller-runtime retry path is covered indirectly by returning Kubernetes API errors to the reconciler
 
 ## Remaining Known Gaps
 

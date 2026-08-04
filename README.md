@@ -6,6 +6,17 @@ CogniSecrets is a minimal Kubernetes controller that composes and synchronizes o
 
 It adds exactly one capability to Kubernetes: explicit, authorized Secret composition across namespace boundaries.
 
+## Best Practice (GitOps)
+
+For GitOps workflows, keep raw Kubernetes Secret manifests local only. Do not commit plaintext Secret data.
+
+One common pattern is:
+
+1. Create a local `secrets.yaml` file containing source Secrets.
+2. Seal it with `kubeseal` from [Bitnami Sealed Secrets](https://github.com/bitnami/sealed-secrets).
+3. Commit only the sealed manifest.
+4. Use CogniSecrets to compose authorized runtime target Secrets from those source Secrets after they are unsealed in the cluster.
+
 ## Status
 
 CogniSecrets is release software.

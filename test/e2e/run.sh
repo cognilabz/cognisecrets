@@ -655,6 +655,85 @@ YAML
   wait_for_absent basic secret/chained
 }
 
+scenario_scale_and_fanout() {
+  log "scenario: scale and fan-out"
+  local namespaces=()
+  local allowed_namespaces=""
+
+  for index in $(seq 1 12); do
+    local namespace="scale-${index}"
+    namespaces+=("${namespace}")
+    k create namespace "${namespace}"
+    if [[ -z "${allowed_namespaces}" ]]; then
+      allowed_namespaces="${namespace}"
+    else
+      allowed_namespaces="${allowed_namespaces},${namespace}"
+    fi
+  done
+
+  k -n shared create secret generic scale-source \
+    --from-literal=value=initial \
+    --from-literal=extra=stable
+  k -n shared annotate secret scale-source \
+    "cognisecrets.cognilabz.com/allowed-namespaces=${allowed_namespaces}"
+
+  for namespace in "${namespaces[@]}"; do
+    cat <<YAML | apply_yaml
+apiVersion: cognilabz.com/v1
+kind: SecretReference
+metadata:
+  name: scale-all
+  namespace: ${namespace}
+spec:
+  sources:
+    - namespace: shared
+      name: scale-source
+---
+apiVersion: cognilabz.com/v1
+kind: SecretReference
+metadata:
+  name: scale-selected
+  namespace: ${namespace}
+spec:
+  sources:
+    - namespace: shared
+      name: scale-source
+      keys:
+        - name: value
+          target: VALUE
+---
+apiVersion: cognilabz.com/v1
+kind: SecretReference
+metadata:
+  name: scale-renamed
+  namespace: ${namespace}
+spec:
+  sources:
+    - namespace: shared
+      name: scale-source
+      keys:
+        - name: extra
+          target: EXTRA
+YAML
+  done
+
+  for namespace in "${namespaces[@]}"; do
+    wait_for_jsonpath "${namespace}" secretreference/scale-all '{.status.conditions[?(@.type=="Ready")].reason}' Synced
+    wait_for_jsonpath "${namespace}" secretreference/scale-selected '{.status.conditions[?(@.type=="Ready")].reason}' Synced
+    wait_for_jsonpath "${namespace}" secretreference/scale-renamed '{.status.conditions[?(@.type=="Ready")].reason}' Synced
+    assert_jsonpath "${namespace}" secret/scale-all '{.data.value}' aW5pdGlhbA==
+    assert_jsonpath "${namespace}" secret/scale-selected '{.data.VALUE}' aW5pdGlhbA==
+    assert_jsonpath "${namespace}" secret/scale-renamed '{.data.EXTRA}' c3RhYmxl
+  done
+
+  k -n shared patch secret scale-source --type=merge -p '{"data":{"value":"dXBkYXRlZA=="}}'
+
+  for namespace in "${namespaces[@]}"; do
+    wait_for_jsonpath "${namespace}" secret/scale-all '{.data.value}' dXBkYXRlZA==
+    wait_for_jsonpath "${namespace}" secret/scale-selected '{.data.VALUE}' dXBkYXRlZA==
+  done
+}
+
 install_controller
 scenario_api_validation
 scenario_basic_sync_and_watches
@@ -662,6 +741,7 @@ scenario_authorization_failures
 scenario_fail_closed_and_recovery
 scenario_conflicts_and_ownership
 scenario_metadata_lifecycle_and_restart
+scenario_scale_and_fanout
 scenario_chain_prevention
 
 log "E2E conformance smoke suite passed"
