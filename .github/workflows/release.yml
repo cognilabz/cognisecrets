@@ -1,12 +1,15 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Semantic version to publish, for example 0.1.1. Leave empty to auto-increment from the latest vX.Y.Z tag, starting at 0.1.1."
+        required: false
+        type: string
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
@@ -16,6 +19,49 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          requested="${{ inputs.version }}"
+          if [[ -n "${requested}" ]]; then
+            if [[ ! "${requested}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              printf 'version must be a semantic version like 0.1.1 or v0.1.1\n' >&2
+              exit 1
+            fi
+            semver="${requested#v}"
+          else
+            latest="$(
+              git tag -l 'v[0-9]*.[0-9]*.[0-9]*' |
+                grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' |
+                sed 's/^v//' |
+                sort -V |
+                tail -n 1 ||
+                true
+            )"
+            if [[ -z "${latest}" ]]; then
+              semver="0.1.1"
+            else
+              IFS=. read -r major minor patch <<<"${latest}"
+              semver="${major}.${minor}.$((patch + 1))"
+            fi
+          fi
+
+          tag="v${semver}"
+          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+            printf 'release tag %s already exists\n' "${tag}" >&2
+            exit 1
+          fi
+
+          {
+            printf 'semver=%s\n' "${semver}"
+            printf 'tag=%s\n' "${tag}"
+          } >>"${GITHUB_OUTPUT}"
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -26,13 +72,20 @@ jobs:
       - name: Install local tools
         run: make tools
 
-      - name: Install kind
-        run: |
-          curl -fL https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64 -o /usr/local/bin/kind
-          chmod +x /usr/local/bin/kind
+      - name: Verify generated files
+        run: make verify-generate
 
-      - name: Run release gate
-        run: make release-gate
+      - name: Run unit tests
+        run: make test
+
+      - name: Render install manifests
+        run: make verify-render
+
+      - name: Build manager binary
+        run: make build
+
+      - name: Check whitespace
+        run: git diff --check
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -46,13 +99,21 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/cognilabz/cognisecrets:${{ github.ref_name }}
+          tags: ghcr.io/cognilabz/cognisecrets:${{ steps.version.outputs.tag }}
 
       - name: Generate install manifest
-        run: make release-manifest VERSION=${{ github.ref_name }}
+        run: make release-manifest VERSION=${{ steps.version.outputs.tag }}
 
       - name: Upload install manifest
         uses: actions/upload-artifact@v4
         with:
-          name: cognisecrets-${{ github.ref_name }}-install
-          path: dist/cognisecrets-${{ github.ref_name }}.yaml
+          name: cognisecrets-${{ steps.version.outputs.tag }}-install
+          path: dist/cognisecrets-${{ steps.version.outputs.tag }}.yaml
+
+      - name: Push release tag
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.version.outputs.tag }}" -m "Release ${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"

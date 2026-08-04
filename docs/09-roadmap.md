@@ -149,7 +149,7 @@ Exit criteria:
 
 - documented operational guidance exists;
 - known failure modes have clear diagnostics;
-- conformance suite is stable in CI.
+- conformance suite is stable in the local release gate.
 
 ## 8. V1 excluded features
 

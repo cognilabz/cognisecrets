@@ -58,7 +58,8 @@ At minimum, the release candidate MUST have:
 - documented RBAC review covering why each granted verb and resource is required;
 - leader election enabled in the default deployment;
 - health and readiness probes enabled in the default deployment;
-- conformance tests running in CI;
+- generated-file, unit-test, render, and build checks running in CI;
+- conformance E2E passing locally before publication;
 - restart behavior covered by E2E tests;
 - watch-driven synchronization covered by E2E tests;
 - known failure modes mapped to clear status reasons or operational diagnostics;
@@ -87,7 +88,9 @@ Generate the versioned manifest:
 make release-manifest VERSION=<tag>
 ```
 
-Publish the image and manifest through the tag-driven GitHub Actions workflow.
+Publish the image and manifest through the manually triggered GitHub Actions workflow. Enter a semantic version such as `0.1.1`, or leave the version input empty to publish the next patch version from the latest `vX.Y.Z` tag. If no release tag exists, the workflow starts at `v0.1.1`.
+
+The GitHub Actions workflow intentionally does not run the local `kind` E2E suite; maintainers MUST run `make release-gate` before starting the release workflow. The workflow creates and pushes the resolved release tag after publishing the image and manifest artifact.
 
 After publication, smoke test the published image in a fresh test cluster:
 
