@@ -73,9 +73,9 @@ jobs:
 
           {
             printf '### Release version\n\n'
-            printf '- Requested version: `%s`\n' "${requested:-<auto>}"
-            printf '- Latest release tag used: `%s`\n' "${latest_tag}"
-            printf '- Resolved version: `%s`\n' "${tag}"
+            printf '%s\n' "- Requested version: \`${requested:-<auto>}\`"
+            printf '%s\n' "- Latest release tag used: \`${latest_tag}\`"
+            printf '%s\n' "- Resolved version: \`${tag}\`"
           } >>"${GITHUB_STEP_SUMMARY}"
 
       - name: Set up Go
