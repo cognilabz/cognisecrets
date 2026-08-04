@@ -99,8 +99,26 @@ jobs:
       - name: Build manager binary
         run: make build
 
+      - name: Render release manifests
+        run: make render IMG=ghcr.io/cognilabz/cognisecrets:${{ steps.version.outputs.tag }}
+
       - name: Check whitespace
         run: git diff --check
+
+      - name: Commit rendered manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add manifests
+          if git diff --cached --quiet; then
+            printf 'No manifest changes to commit.\n'
+            exit 0
+          fi
+          git commit -m "Render manifests for ${{ steps.version.outputs.tag }}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -116,19 +134,14 @@ jobs:
           push: true
           tags: ghcr.io/cognilabz/cognisecrets:${{ steps.version.outputs.tag }}
 
-      - name: Generate install manifest
-        run: make release-manifest VERSION=${{ steps.version.outputs.tag }}
-
-      - name: Upload install manifest
+      - name: Upload rendered manifests
         uses: actions/upload-artifact@v4
         with:
-          name: cognisecrets-${{ steps.version.outputs.tag }}-install
-          path: dist/cognisecrets-${{ steps.version.outputs.tag }}.yaml
+          name: cognisecrets-${{ steps.version.outputs.tag }}-manifests
+          path: manifests
 
       - name: Push release tag
         shell: bash
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "${{ steps.version.outputs.tag }}" -m "Release ${{ steps.version.outputs.tag }}"
           git push origin "${{ steps.version.outputs.tag }}"

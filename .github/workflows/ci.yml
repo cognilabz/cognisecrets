@@ -30,7 +30,7 @@ jobs:
         run: make test
 
       - name: Render install manifests
-        run: make render >/tmp/cognisecrets-install.yaml
+        run: make verify-render
 
       - name: Build manager binary
         run: make build

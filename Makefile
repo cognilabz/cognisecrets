@@ -5,7 +5,7 @@ GO_TOOLCHAIN ?= go1.26.5
 GOTOOLCHAIN_ENV := GOTOOLCHAIN=$(GO_TOOLCHAIN)
 IMG ?= ghcr.io/cognilabz/cognisecrets:latest
 VERSION ?= v0.1.0
-DIST_DIR ?= dist
+MANIFESTS_DIR ?= manifests
 
 KUBEBUILDER ?= $(LOCALBIN)/kubebuilder
 KUBEBUILDER_VERSION ?= v4.15.0
@@ -61,12 +61,16 @@ docker-push:
 
 .PHONY: render
 render: $(KUSTOMIZE)
-	$(KUSTOMIZE) build config/default | sed "s#ghcr.io/cognilabz/cognisecrets:latest#$(IMG)#g"
+	test -n "$(MANIFESTS_DIR)"
+	test "$(MANIFESTS_DIR)" != "/"
+	rm -rf $(MANIFESTS_DIR)
+	mkdir -p $(MANIFESTS_DIR)
+	$(KUSTOMIZE) build config/default | sed "s#ghcr.io/cognilabz/cognisecrets:latest#$(IMG)#g" > $(MANIFESTS_DIR)/cognisecrets.yaml
+	printf 'resources:\n  - cognisecrets.yaml\n' > $(MANIFESTS_DIR)/kustomization.yaml
 
 .PHONY: release-manifest
-release-manifest: $(KUSTOMIZE)
-	mkdir -p $(DIST_DIR)
-	$(KUSTOMIZE) build config/default | sed "s#ghcr.io/cognilabz/cognisecrets:latest#ghcr.io/cognilabz/cognisecrets:$(VERSION)#g" > $(DIST_DIR)/cognisecrets-$(VERSION).yaml
+release-manifest:
+	$(MAKE) render IMG=ghcr.io/cognilabz/cognisecrets:$(VERSION)
 
 .PHONY: e2e
 e2e: $(KUSTOMIZE)

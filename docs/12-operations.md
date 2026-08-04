@@ -7,7 +7,8 @@ This document describes the operational checks and diagnostics expected for Cogn
 Install the rendered manifest:
 
 ```sh
-make render IMG=ghcr.io/cognilabz/cognisecrets:<tag> | kubectl apply -f -
+make render IMG=ghcr.io/cognilabz/cognisecrets:<tag>
+kubectl apply -k manifests
 ```
 
 Verify rollout:

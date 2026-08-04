@@ -1,38 +1,24 @@
 # CogniSecrets
 
-> Compose Kubernetes Secrets from existing Secrets.
+CogniSecrets is a minimal Kubernetes controller that composes and synchronizes a target `Secret` from one or more existing source `Secret` objects.
 
-CogniSecrets is a minimal Kubernetes controller that composes and synchronizes one target `Secret` from one or more existing source `Secret` objects.
+## Installation
+
+```sh
+kubectl apply -k manifests
+```
 
 ## Best Practice (GitOps)
 
-For GitOps workflows, keep raw Kubernetes Secret manifests local only. Do not commit plaintext Secret data.
+1. create "secrets.yaml"
+2. kubeseal -o yaml < secrets.yaml > sealed-secrets.yaml
+3. create "congisecrets.yaml"
+4. apply both "sealed-secrets.yaml" and "cognisecrets.yaml" to Kubernetes.
 
-One common pattern is:
+Sealed-secrets and cognisecrets can be push to git. But never push the plain secrets file to github!
 
-1. Create a local `secrets.yaml` file containing source Secrets.
-2. Seal it with `kubeseal` from [Bitnami Sealed Secrets](https://github.com/bitnami/sealed-secrets).
-3. Commit only the sealed manifest.
-4. Use CogniSecrets to compose authorized runtime target Secrets from those source Secrets after they are unsealed in the cluster.
+`kubeseal` is provided by [Bitnami Sealed Secrets](https://github.com/bitnami/sealed-secrets).
 
-## Status
-
-CogniSecrets is release software.
-
-The Go reference implementation includes the `SecretReference` API, generated CRD, controller manager, RBAC, install manifests, samples, unit tests, and a local kind E2E conformance suite.
-
-## Core principles
-
-- Minimal API and controller
-- Kubernetes-native behavior
-- Explicit cross-namespace authorization
-- Stateless, event-driven reconciliation
-- Fail closed: no stale or unauthorized target Secrets
-- One `SecretReference` produces exactly one target `Secret`
-
-## Non-goals
-
-CogniSecrets is not a vault, secret store, encryption solution, rotation system, GitOps engine, or replacement for Sealed Secrets or External Secrets.
 
 ## Documentation
 
@@ -55,14 +41,16 @@ CogniSecrets is not a vault, secret store, encryption solution, rotation system,
 Render and apply the default manifests:
 
 ```sh
-make render | kubectl apply -f -
+make render
+kubectl apply -k manifests
 kubectl -n cognisecrets-system rollout status deployment/cognisecrets-controller-manager
 ```
 
 The default deployment uses `ghcr.io/cognilabz/cognisecrets:latest`. To render manifests for a specific image tag:
 
 ```sh
-make render IMG=ghcr.io/cognilabz/cognisecrets:v0.1.0 | kubectl apply -f -
+make render IMG=ghcr.io/cognilabz/cognisecrets:v0.1.0
+kubectl apply -k manifests
 ```
 
 For local kind testing, build and load a local image before applying manifests:
@@ -70,7 +58,8 @@ For local kind testing, build and load a local image before applying manifests:
 ```sh
 make docker-build IMG=ghcr.io/cognilabz/cognisecrets:dev
 kind load docker-image ghcr.io/cognilabz/cognisecrets:dev
-make render IMG=ghcr.io/cognilabz/cognisecrets:dev | kubectl apply -f -
+make render IMG=ghcr.io/cognilabz/cognisecrets:dev
+kubectl apply -k manifests
 ```
 
 ## Example
@@ -143,7 +132,7 @@ Build the controller image:
 make docker-build
 ```
 
-Generate a versioned release install manifest:
+Generate versioned release install manifests:
 
 ```sh
 make release-manifest VERSION=v0.1.0

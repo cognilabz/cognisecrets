@@ -85,17 +85,19 @@ If this gate is not fully automated, the exact command, cluster shape, result, d
 Generate the versioned manifest:
 
 ```sh
-make release-manifest VERSION=<tag>
+make render IMG=ghcr.io/cognilabz/cognisecrets:<tag>
 ```
 
-Publish the image and manifest through the manually triggered GitHub Actions workflow. Enter a semantic version such as `0.1.1`, or leave the version input empty to publish the next patch version from the latest `vX.Y.Z` tag. If no release tag exists, the workflow starts at `v0.1.1`.
+This clears and recreates the `manifests/` directory with `cognisecrets.yaml` and `kustomization.yaml`.
 
-The GitHub Actions workflow intentionally does not run the local `kind` E2E suite; maintainers MUST run `make release-gate` before starting the release workflow. The workflow creates and pushes the resolved release tag after publishing the image and manifest artifact.
+Publish the image and manifests through the manually triggered GitHub Actions workflow. Enter a semantic version such as `0.1.1`, or leave the version input empty to publish the next patch version from the latest `vX.Y.Z` tag. If no release tag exists, the workflow starts at `v0.1.1`.
+
+The GitHub Actions workflow intentionally does not run the local `kind` E2E suite; maintainers MUST run `make release-gate` before starting the release workflow. The workflow renders `manifests/` with the resolved image tag, commits that folder, publishes the image and manifest artifact, then creates and pushes the resolved release tag.
 
 After publication, smoke test the published image in a fresh test cluster:
 
 ```sh
-kubectl apply -f dist/cognisecrets-<tag>.yaml
+kubectl apply -k manifests
 kubectl -n cognisecrets-system rollout status deployment/cognisecrets-controller-manager
 ```
 
