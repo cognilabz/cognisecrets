@@ -1,10 +1,8 @@
 # CogniSecrets
 
-> Compose Kubernetes Secrets from existing Secrets across namespaces with explicit authorization.
+> Compose Kubernetes Secrets from existing Secrets.
 
 CogniSecrets is a minimal Kubernetes controller that composes and synchronizes one target `Secret` from one or more existing source `Secret` objects.
-
-It adds exactly one capability to Kubernetes: explicit, authorized Secret composition across namespace boundaries.
 
 ## Best Practice (GitOps)
 

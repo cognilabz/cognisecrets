@@ -1,4 +1,5 @@
 name: Release
+run-name: Release ${{ github.event.inputs.version || 'next patch version' }}
 
 on:
   workflow_dispatch:
@@ -25,10 +26,13 @@ jobs:
       - name: Resolve release version
         id: version
         shell: bash
+        env:
+          REQUESTED_VERSION: ${{ github.event.inputs.version }}
         run: |
           set -euo pipefail
 
-          requested="${{ inputs.version }}"
+          requested="$(printf '%s' "${REQUESTED_VERSION:-}" | xargs)"
+          latest=""
           if [[ -n "${requested}" ]]; then
             if [[ ! "${requested}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
               printf 'version must be a semantic version like 0.1.1 or v0.1.1\n' >&2
@@ -53,6 +57,10 @@ jobs:
           fi
 
           tag="v${semver}"
+          latest_tag="<none>"
+          if [[ -n "${latest}" ]]; then
+            latest_tag="v${latest}"
+          fi
           if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
             printf 'release tag %s already exists\n' "${tag}" >&2
             exit 1
@@ -62,6 +70,13 @@ jobs:
             printf 'semver=%s\n' "${semver}"
             printf 'tag=%s\n' "${tag}"
           } >>"${GITHUB_OUTPUT}"
+
+          {
+            printf '### Release version\n\n'
+            printf '- Requested version: `%s`\n' "${requested:-<auto>}"
+            printf '- Latest release tag used: `%s`\n' "${latest_tag}"
+            printf '- Resolved version: `%s`\n' "${tag}"
+          } >>"${GITHUB_STEP_SUMMARY}"
 
       - name: Set up Go
         uses: actions/setup-go@v5
