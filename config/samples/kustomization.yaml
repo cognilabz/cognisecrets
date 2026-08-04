@@ -2,3 +2,4 @@ resources:
   - cognilabz_v1_secretreference_all_keys.yaml
   - cognilabz_v1_secretreference_renamed_keys.yaml
   - cognilabz_v1_secretreference_multi_source.yaml
+  - cognilabz_v1_secretreference_same_namespace.yaml

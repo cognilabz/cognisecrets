@@ -299,6 +299,25 @@ spec:
       name: messaging
 ```
 
+### 9.4 Reference a Secret in the same namespace
+
+```yaml
+apiVersion: cognilabz.com/v1
+kind: SecretReference
+metadata:
+  name: application-credentials
+  namespace: application
+spec:
+  type: Opaque
+  sources:
+    - name: database
+      keys:
+        - name: username
+          target: DB_USERNAME
+        - name: password
+          target: DB_PASSWORD
+```
+
 ## 10. Explicitly unsupported in V1
 
 The V1 API MUST NOT include:
