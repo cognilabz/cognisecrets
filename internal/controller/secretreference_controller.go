@@ -134,34 +134,35 @@ func (r *SecretReferenceReconciler) desiredTarget(ctx context.Context, ref *cogn
 
 	for _, sourceRef := range ref.Spec.Sources {
 		var source corev1.Secret
-		key := types.NamespacedName{Namespace: sourceRef.Namespace, Name: sourceRef.Name}
+		sourceNamespace := resolvedSourceNamespace(ref, sourceRef)
+		key := types.NamespacedName{Namespace: sourceNamespace, Name: sourceRef.Name}
 		if err := r.Get(ctx, key, &source); err != nil {
 			if apierrors.IsNotFound(err) {
-				return nil, fail(cogniv1.ReasonSourceNotFound, "source Secret %s/%s does not exist", sourceRef.Namespace, sourceRef.Name)
+				return nil, fail(cogniv1.ReasonSourceNotFound, "source Secret %s/%s does not exist", sourceNamespace, sourceRef.Name)
 			}
-			return nil, fail(cogniv1.ReasonWriteFailed, "failed to read source Secret %s/%s: %v", sourceRef.Namespace, sourceRef.Name, err)
+			return nil, fail(cogniv1.ReasonWriteFailed, "failed to read source Secret %s/%s: %v", sourceNamespace, sourceRef.Name, err)
 		}
 
 		if isManagedSource(&source) {
-			return nil, fail(cogniv1.ReasonManagedSourceRejected, "source Secret %s/%s is managed by CogniSecrets", sourceRef.Namespace, sourceRef.Name)
+			return nil, fail(cogniv1.ReasonManagedSourceRejected, "source Secret %s/%s is managed by CogniSecrets", sourceNamespace, sourceRef.Name)
 		}
 
 		if !allowsNamespace(source.Annotations[cogniv1.AuthorizationAnnotation], ref.Namespace) {
-			return nil, fail(cogniv1.ReasonAccessDenied, "source Secret %s/%s does not authorize namespace %s", sourceRef.Namespace, sourceRef.Name, ref.Namespace)
+			return nil, fail(cogniv1.ReasonAccessDenied, "source Secret %s/%s does not authorize namespace %s", sourceNamespace, sourceRef.Name, ref.Namespace)
 		}
 
 		mappings := resolvedMappings(sourceRef, source.Data)
 		for _, mapping := range mappings {
 			value, ok := source.Data[mapping.Name]
 			if !ok {
-				return nil, fail(cogniv1.ReasonSourceKeyNotFound, "source Secret %s/%s does not contain key %s", sourceRef.Namespace, sourceRef.Name, mapping.Name)
+				return nil, fail(cogniv1.ReasonSourceKeyNotFound, "source Secret %s/%s does not contain key %s", sourceNamespace, sourceRef.Name, mapping.Name)
 			}
 			targetKey := mapping.Target
 			if targetKey == "" {
 				targetKey = mapping.Name
 			}
 			current := valueContributor{
-				sourceNamespace: sourceRef.Namespace,
+				sourceNamespace: sourceNamespace,
 				sourceName:      sourceRef.Name,
 				sourceKey:       mapping.Name,
 				targetKey:       targetKey,
@@ -207,6 +208,13 @@ func resolvedMappings(source cogniv1.SecretSource, data map[string][]byte) []cog
 		mappings = append(mappings, cogniv1.SecretKeyMapping{Name: key, Target: key})
 	}
 	return mappings
+}
+
+func resolvedSourceNamespace(ref *cogniv1.SecretReference, source cogniv1.SecretSource) string {
+	if source.Namespace != "" {
+		return source.Namespace
+	}
+	return ref.Namespace
 }
 
 func allowsNamespace(annotation, namespace string) bool {
@@ -387,7 +395,7 @@ func (r *SecretReferenceReconciler) SetupWithManager(ctx context.Context, mgr ct
 		keys := make([]string, 0, len(ref.Spec.Sources))
 		seen := map[string]struct{}{}
 		for _, source := range ref.Spec.Sources {
-			key := source.Namespace + "/" + source.Name
+			key := resolvedSourceNamespace(ref, source) + "/" + source.Name
 			if _, ok := seen[key]; ok {
 				continue
 			}

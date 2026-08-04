@@ -110,9 +110,11 @@ The list form is mandatory even when exactly one source is used. The API MUST NO
 
 Type: `string`
 
-Required: yes
+Required: no
 
 The namespace of the source Secret.
+
+If omitted, the controller resolves the source namespace to the `SecretReference` namespace.
 
 The value MUST be a valid Kubernetes namespace name.
 

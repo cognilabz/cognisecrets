@@ -62,6 +62,36 @@ func TestReconcileCreatesComposedTarget(t *testing.T) {
 	assertReady(t, reconciler.Client, ctx, ref, metav1.ConditionTrue, cogniv1.ReasonSynced)
 }
 
+func TestReconcileUsesReferenceNamespaceWhenSourceNamespaceOmitted(t *testing.T) {
+	ctx := context.Background()
+	ref := newReference("application", "application-credentials", []cogniv1.SecretSource{
+		{
+			Name: "database",
+			Keys: []cogniv1.SecretKeyMapping{
+				{Name: "username", Target: "DB_USERNAME"},
+				{Name: "password", Target: "DB_PASSWORD"},
+			},
+		},
+	})
+	source := newSource("application", "database", "application", map[string][]byte{
+		"username": []byte("app"),
+		"password": []byte("secret"),
+	})
+	reconciler := newTestReconciler(t, ref, source)
+
+	reconcileOnce(t, ctx, reconciler, ref)
+
+	var target corev1.Secret
+	if err := reconciler.Get(ctx, types.NamespacedName{Namespace: "application", Name: "application-credentials"}, &target); err != nil {
+		t.Fatalf("expected target Secret: %v", err)
+	}
+	assertData(t, target.Data, map[string][]byte{
+		"DB_USERNAME": []byte("app"),
+		"DB_PASSWORD": []byte("secret"),
+	})
+	assertReady(t, reconciler.Client, ctx, ref, metav1.ConditionTrue, cogniv1.ReasonSynced)
+}
+
 func TestReconcileReportsForeignTargetBeforeSourceErrors(t *testing.T) {
 	ctx := context.Background()
 	ref := newReference("application", "database", []cogniv1.SecretSource{{Namespace: "shared", Name: "missing"}})

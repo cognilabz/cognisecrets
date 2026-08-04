@@ -39,10 +39,11 @@ type SecretReferenceSpec struct {
 // SecretSource identifies one source Secret and optional key mappings.
 type SecretSource struct {
 	// Namespace is the namespace of the source Secret.
-	// +kubebuilder:validation:Required
+	// If omitted, the controller resolves it to the SecretReference namespace.
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
 	// +kubebuilder:validation:MaxLength=63
-	Namespace string `json:"namespace"`
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
 
 	// Name is the name of the source Secret.
 	// +kubebuilder:validation:Required
