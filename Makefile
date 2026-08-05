@@ -66,7 +66,7 @@ render: $(KUSTOMIZE)
 	rm -rf $(MANIFESTS_DIR)
 	mkdir -p $(MANIFESTS_DIR)
 	$(KUSTOMIZE) build config/default | sed "s#ghcr.io/cognilabz/cognisecrets:latest#$(IMG)#g" > $(MANIFESTS_DIR)/cognisecrets.yaml
-	printf 'resources:\n  - cognisecrets.yaml\n' > $(MANIFESTS_DIR)/kustomization.yaml
+	printf 'apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n\nresources:\n- cognisecrets.yaml\n' > $(MANIFESTS_DIR)/kustomization.yaml
 
 .PHONY: release-manifest
 release-manifest:
