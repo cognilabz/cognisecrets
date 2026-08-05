@@ -14,6 +14,8 @@ If reconciliation fails, the controller MUST set `Ready=False` and MUST NOT crea
 
 If a foreign target Secret already exists, reconciliation MUST fail with `TargetAlreadyExists`.
 
+When that foreign target Secret is later deleted, the controller MUST reconcile the matching `SecretReference`. If all sources exist, authorization succeeds, and composition is valid, the controller MUST create the managed target Secret.
+
 ## 3. Update
 
 When a `SecretReference` spec changes, the controller MUST recompute the full desired target Secret.

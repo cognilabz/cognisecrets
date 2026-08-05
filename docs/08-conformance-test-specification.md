@@ -92,6 +92,7 @@ Required cases:
 - preserve unrelated owner references;
 - fail with `TargetAlreadyExists` when target exists without matching owner reference;
 - fail with `TargetAlreadyExists` when target has managed-by label but wrong owner;
+- create managed target after a blocking foreign target Secret is deleted;
 - do not adopt foreign target Secret.
 
 ## 8. Chain prevention tests
@@ -136,6 +137,7 @@ Required cases:
 
 - source Secret data update enqueues dependent `SecretReference`;
 - source Secret annotation update enqueues dependent `SecretReference`;
+- foreign target Secret deletion enqueues the matching `SecretReference`;
 - unrelated Secret update does not require dependent target changes;
 - multiple references to one source are reconciled after source update.
 

@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -372,13 +373,20 @@ func (r *SecretReferenceReconciler) setFailure(ctx context.Context, ref *cogniv1
 }
 
 func (r *SecretReferenceReconciler) setCondition(ctx context.Context, ref *cogniv1.SecretReference, condition metav1.Condition) (ctrl.Result, error) {
-	current := ref.DeepCopy()
-	meta.SetStatusCondition(&ref.Status.Conditions, condition)
-	if reflect.DeepEqual(current.Status.Conditions, ref.Status.Conditions) {
-		return ctrl.Result{}, nil
-	}
-	if err := r.Status().Update(ctx, ref); err != nil {
-		return ctrl.Result{}, err
+	key := types.NamespacedName{Namespace: ref.Namespace, Name: ref.Name}
+	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		var current cogniv1.SecretReference
+		if err := r.Get(ctx, key, &current); err != nil {
+			return err
+		}
+		updated := current.DeepCopy()
+		meta.SetStatusCondition(&updated.Status.Conditions, condition)
+		if reflect.DeepEqual(current.Status.Conditions, updated.Status.Conditions) {
+			return nil
+		}
+		return r.Status().Update(ctx, updated)
+	}); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	return ctrl.Result{}, nil
 }
@@ -411,6 +419,7 @@ func (r *SecretReferenceReconciler) SetupWithManager(ctx context.Context, mgr ct
 		For(&cogniv1.SecretReference{}).
 		Owns(&corev1.Secret{}).
 		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.referencesForSource)).
+		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.referenceForTarget)).
 		Complete(r)
 }
 
@@ -425,6 +434,15 @@ func (r *SecretReferenceReconciler) referencesForSource(ctx context.Context, obj
 		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: ref.Namespace, Name: ref.Name}})
 	}
 	return requests
+}
+
+func (r *SecretReferenceReconciler) referenceForTarget(_ context.Context, obj client.Object) []reconcile.Request {
+	return []reconcile.Request{{
+		NamespacedName: types.NamespacedName{
+			Namespace: obj.GetNamespace(),
+			Name:      obj.GetName(),
+		},
+	}}
 }
 
 func firstErr(primary, secondary error) error {

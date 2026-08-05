@@ -111,6 +111,40 @@ func TestReconcileReportsForeignTargetBeforeSourceErrors(t *testing.T) {
 	assertReady(t, reconciler.Client, ctx, ref, metav1.ConditionFalse, cogniv1.ReasonTargetAlreadyExists)
 }
 
+func TestForeignTargetDeletionEnqueuesReferenceAndCreatesManagedTarget(t *testing.T) {
+	ctx := context.Background()
+	ref := newReference("application", "database", []cogniv1.SecretSource{{Namespace: "shared", Name: "credentials"}})
+	source := newSource("shared", "credentials", "application", map[string][]byte{"password": []byte("secret")})
+	foreign := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "database", Namespace: "application"},
+		Data:       map[string][]byte{"keep": []byte("me")},
+	}
+	reconciler := newTestReconciler(t, ref, source, foreign)
+
+	reconcileOnce(t, ctx, reconciler, ref)
+	assertReady(t, reconciler.Client, ctx, ref, metav1.ConditionFalse, cogniv1.ReasonTargetAlreadyExists)
+
+	if err := reconciler.Delete(ctx, foreign); err != nil {
+		t.Fatalf("delete foreign target: %v", err)
+	}
+	requests := reconciler.referenceForTarget(ctx, foreign)
+	if len(requests) != 1 || requests[0].NamespacedName != (types.NamespacedName{Namespace: "application", Name: "database"}) {
+		t.Fatalf("target delete requests = %#v, want application/database", requests)
+	}
+
+	reconcileOnce(t, ctx, reconciler, ref)
+
+	var target corev1.Secret
+	if err := reconciler.Get(ctx, types.NamespacedName{Namespace: "application", Name: "database"}, &target); err != nil {
+		t.Fatalf("expected managed target after foreign deletion: %v", err)
+	}
+	assertData(t, target.Data, map[string][]byte{"password": []byte("secret")})
+	if !ownedBy(&target, ref) {
+		t.Fatalf("target Secret does not have controller owner reference for SecretReference")
+	}
+	assertReady(t, reconciler.Client, ctx, ref, metav1.ConditionTrue, cogniv1.ReasonSynced)
+}
+
 func TestReconcileDeletesManagedTargetOnAccessDenied(t *testing.T) {
 	ctx := context.Background()
 	ref := newReference("application", "database", []cogniv1.SecretSource{{Namespace: "shared", Name: "database"}})

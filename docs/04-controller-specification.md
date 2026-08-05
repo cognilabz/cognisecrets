@@ -50,6 +50,8 @@ The controller SHOULD maintain an index from source Secret identity to referenci
 
 When a source Secret changes, the controller SHOULD enqueue only references that mention that source.
 
+When a Secret changes in the same namespace/name position as a possible target Secret, the controller SHOULD enqueue the matching `SecretReference` with the same namespace and name. This includes foreign target Secret deletion, so a previously blocked `SecretReference` can create its managed target after the conflicting Secret is removed.
+
 The controller MUST also handle missed watch events by being correct on the next reconcile.
 
 ## 5. Desired target Secret
@@ -92,6 +94,8 @@ The label `app.kubernetes.io/managed-by: cognisecrets` is not sufficient proof o
 If the target Secret exists but is not owned by the current `SecretReference`, reconciliation MUST fail with `TargetAlreadyExists`.
 
 The controller MUST NOT adopt the existing Secret.
+
+If the foreign target Secret is later deleted and the desired state is valid, reconciliation MUST create the managed target Secret.
 
 ## 7. Managed fields
 
