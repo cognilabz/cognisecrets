@@ -16,7 +16,7 @@ Managing secrets in GitOps environments is often a trade-off:
 - External Secrets requires an external secret backend.
 - Sealed Secrets encrypts secrets, but does not help composing or reusing them.
 
-CogniSecrets fills this gap by allowing applications to consume secrets from one or multiple encrypted source secrets while keeping everything Kubernetes-native.
+CogniSecrets fills this gap by allowing applications to consume Secrets derived from one or multiple encrypted SealedSecret manifests while keeping everything Kubernetes-native.
 
 ### Features
 
@@ -25,8 +25,8 @@ CogniSecrets fills this gap by allowing applications to consume secrets from one
 - 🔄 Compose a Secret from multiple source Secrets
 - 📦 Kubernetes-native controller
 - ⚡ Designed for GitOps workflows
-- ✅ Works perfectly with Argo CD
-- 🔑 Never stores plaintext secrets itself
+- ✅ Argo CD friendly with custom health checks
+- 🔑 Does not introduce its own secret store
 
 ---
 
@@ -62,7 +62,7 @@ CogniSecrets is a good fit when you want to:
 - avoid operating HashiCorp Vault
 - reuse the same secret values across multiple applications
 - compose application secrets from different source secrets
-- integrate seamlessly with Argo CD
+- use Argo CD with a custom health check
 
 ---
 
@@ -71,14 +71,29 @@ CogniSecrets is a good fit when you want to:
 | Feature | CogniSecrets | Sealed Secrets | External Secrets | HashiCorp Vault |
 |----------|--------------|----------------|------------------|-----------------|
 | GitOps native | ✅ | ✅ | ✅ | ⚠️ |
-| Secret encryption | Uses Sealed Secrets | ✅ | ❌ | ✅ |
-| Secret composition | ✅ | ❌ | Limited | Limited |
+| Secret encryption | Via Sealed Secrets | ✅ | ❌ | ✅ |
+| Secret composition | ✅ | ❌ | Not primary focus | Not primary focus |
 | External backend required | ❌ | ❌ | ✅ | ✅ |
 | Additional infrastructure | ❌ | ❌ | Depends | ✅ |
 
 ---
 
-# Installation
+## Installation
+
+### Prerequisites
+
+- A Kubernetes cluster
+- `kubectl`
+- `kubeseal`
+- Bitnami Sealed Secrets installed in the cluster
+
+### From a release manifest
+
+```bash
+kubectl apply -f https://github.com/cognilabz/cognisecrets/releases/latest/download/cognisecrets.yaml
+```
+
+### From a checkout of this repository
 
 ```bash
 kubectl apply -k manifests
@@ -86,9 +101,9 @@ kubectl apply -k manifests
 
 ---
 
-# Quick Start
+## Quick Start
 
-## 1. Create a local Secret
+### 1. Create a local Secret
 
 > **Do not commit this file to Git.**
 
@@ -110,7 +125,7 @@ stringData:
 
 ---
 
-## 2. Seal the Secret
+### 2. Seal the Secret
 
 ```bash
 kubeseal -o yaml < secrets.yaml > sealed-secrets.yaml
@@ -123,7 +138,9 @@ The generated `sealed-secrets.yaml` can safely be committed to Git.
 
 ---
 
-## 3. Create a SecretReference
+### 3. Create a SecretReference
+
+Save this as `secretreference.yaml`:
 
 ```yaml
 apiVersion: cognilabz.com/v1
@@ -150,14 +167,22 @@ spec:
 
 ---
 
-## 4. Apply the manifests
+### 4. Apply the manifests
 
 ```bash
+kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -
 kubectl apply -f sealed-secrets.yaml
 kubectl apply -f secretreference.yaml
 ```
 
 CogniSecrets automatically creates the target Kubernetes `Secret`.
+
+Verify the result:
+
+```bash
+kubectl -n dev get secretreference mysecret
+kubectl -n dev get secret mysecret
+```
 
 ---
 
@@ -218,7 +243,7 @@ config/samples/
 
 ---
 
-# Development
+## Development
 
 ```bash
 make tools
@@ -245,7 +270,7 @@ make release-manifest VERSION=v0.2.6
 
 ---
 
-# Documentation
+## Documentation
 
 1. [Product overview](docs/01-product-overview.md)
 2. [Design principles](docs/02-design-principles.md)
@@ -261,20 +286,10 @@ make release-manifest VERSION=v0.2.6
 12. [Operations](docs/12-operations.md)
 13. [v0.2.6 release notes](docs/release-notes/v0.2.6.md)
 
----
-
-# Roadmap
-
-Planned improvements can be found in
-
-```
-docs/09-roadmap.md
-```
-
 Contributions and feature requests are welcome.
 
 ---
 
-# License
+## License
 
 CogniSecrets is licensed under the Apache License 2.0.
