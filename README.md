@@ -99,7 +99,7 @@ make release-manifest VERSION=v0.1.0
 10. [E2E test concept](docs/10-e2e-test-concept.md)
 11. [Release](docs/11-release.md)
 12. [Operations](docs/12-operations.md)
-13. [v0.1.0 release notes](docs/release-notes/v0.1.0.md)
+13. [v0.2.5 release notes](docs/release-notes/v0.2.5.md)
 
 ## License
 

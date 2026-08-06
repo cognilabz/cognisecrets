@@ -90,9 +90,9 @@ make render IMG=ghcr.io/cognilabz/cognisecrets:<tag>
 
 This clears and recreates the `manifests/` directory with `cognisecrets.yaml` and `kustomization.yaml`.
 
-Publish the image and manifests through the manually triggered GitHub Actions workflow. Enter a semantic version such as `0.1.1`, or leave the version input empty to publish the next patch version from the latest `vX.Y.Z` tag. If no release tag exists, the workflow starts at `v0.1.1`.
+Publish the image, manifests, release notes, and GitHub Release through the manually triggered GitHub Actions workflow. Enter a semantic version such as `0.1.1`, or leave the version input empty to publish the next patch version from the latest `vX.Y.Z` tag. If no release tag exists, the workflow starts at `v0.1.1`.
 
-The GitHub Actions workflow intentionally does not run the local `kind` E2E suite; maintainers MUST run `make release-gate` before starting the release workflow. The workflow renders `manifests/` with the resolved image tag, commits that folder, publishes the image and manifest artifact, then creates and pushes the resolved release tag.
+The GitHub Actions workflow intentionally does not run the local `kind` E2E suite; maintainers MUST run `make release-gate` before starting the release workflow. The workflow renders `manifests/` with the resolved image tag, generates `docs/release-notes/<tag>.md`, replaces the README release-notes link with the latest release, commits those release artifacts, publishes the image and manifest artifact, creates and pushes the resolved release tag, and creates a GitHub Release using the generated release notes as the release body.
 
 After publication, smoke test the published image in a fresh test cluster:
 

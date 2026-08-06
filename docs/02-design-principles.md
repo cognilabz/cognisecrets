@@ -49,7 +49,8 @@ CogniSecrets avoids implicit shortcuts and hidden defaults that change resource 
 
 In particular:
 
-- every source explicitly specifies `namespace` and `name`;
+- every source explicitly specifies `name`;
+- cross-namespace sources explicitly specify `namespace`;
 - `sources` is always a list;
 - there is no shorthand such as `namespace/name`;
 - same-namespace access is not implicitly authorized;
@@ -59,6 +60,7 @@ In particular:
 The only intentional defaults are simple value defaults with unambiguous meaning, such as:
 
 - omitted `spec.type` means `Opaque`;
+- omitted source `namespace` means the `SecretReference` namespace;
 - omitted key `target` is resolved by the controller as the source key name;
 - omitted `keys` means all keys from that source are copied.
 

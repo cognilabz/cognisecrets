@@ -30,7 +30,7 @@ Required cases:
 
 - reject `SecretReference` without `spec.sources`;
 - reject empty `spec.sources`;
-- reject source without `namespace`;
+- accept source without `namespace` and resolve it to the `SecretReference` namespace;
 - reject source without `name`;
 - reject empty `keys` list when present;
 - reject key mapping without `name`;

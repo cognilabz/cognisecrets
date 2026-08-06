@@ -12,7 +12,7 @@ Legend:
 
 - `[x]` reject `SecretReference` without `spec.sources`
 - `[x]` reject empty `spec.sources`
-- `[x]` reject source without `namespace`
+- `[x]` accept source without `namespace` and resolve it to the `SecretReference` namespace
 - `[x]` reject source without `name`
 - `[x]` reject empty `keys` list when present
 - `[x]` reject key mapping without `name`

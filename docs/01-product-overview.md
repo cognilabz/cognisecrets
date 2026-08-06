@@ -55,7 +55,7 @@ A `SecretReference`:
 
 - Exists in the namespace where the target Secret is required
 - Has the same name as the target Secret
-- References one or more source Secrets using explicit `namespace` and `name` fields
+- References one or more source Secrets by `name`, with optional `namespace`
 - Optionally selects and renames keys
 - Produces exactly one target Secret
 
@@ -164,6 +164,7 @@ If an existing Secret with the target name is not owned by the corresponding `Se
 
 - `spec.sources` is required and contains at least one source.
 - Sources are always represented as a list.
+- If a source `namespace` is omitted, it resolves to the `SecretReference` namespace.
 - Source Secrets of all Kubernetes Secret types are accepted.
 - If `keys` is omitted, all source keys are copied.
 - If `keys` is present, only listed keys are copied.

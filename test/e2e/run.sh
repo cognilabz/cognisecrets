@@ -176,17 +176,21 @@ spec:
 YAML
 )"
 
-  expect_apply_failure "source without namespace" "$(cat <<'YAML'
+  k -n api-validation create secret generic database --from-literal=value=local-value
+  k -n api-validation annotate secret database cognisecrets.cognilabz.com/allowed-namespaces=api-validation
+  apply_yaml "$(cat <<'YAML'
 apiVersion: cognilabz.com/v1
 kind: SecretReference
 metadata:
-  name: missing-namespace
+  name: omitted-namespace
   namespace: api-validation
 spec:
   sources:
     - name: database
 YAML
 )"
+  wait_for_jsonpath api-validation secretreference/omitted-namespace '{.status.conditions[?(@.type=="Ready")].reason}' Synced
+  assert_jsonpath api-validation secret/omitted-namespace '{.data.value}' bG9jYWwtdmFsdWU=
 
   expect_apply_failure "source without name" "$(cat <<'YAML'
 apiVersion: cognilabz.com/v1

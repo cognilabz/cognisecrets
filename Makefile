@@ -72,6 +72,10 @@ render: $(KUSTOMIZE)
 release-manifest:
 	$(MAKE) render IMG=ghcr.io/cognilabz/cognisecrets:$(VERSION)
 
+.PHONY: release-notes
+release-notes:
+	tools/generate-release-notes.sh $(VERSION) ghcr.io/cognilabz/cognisecrets:$(VERSION)
+
 .PHONY: e2e
 e2e: $(KUSTOMIZE)
 	test/e2e/run.sh

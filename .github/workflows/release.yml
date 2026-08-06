@@ -32,7 +32,14 @@ jobs:
           set -euo pipefail
 
           requested="$(printf '%s' "${REQUESTED_VERSION:-}" | xargs)"
-          latest=""
+          latest="$(
+            git tag -l 'v[0-9]*.[0-9]*.[0-9]*' |
+              grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' |
+              sed 's/^v//' |
+              sort -V |
+              tail -n 1 ||
+              true
+          )"
           if [[ -n "${requested}" ]]; then
             if [[ ! "${requested}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
               printf 'version must be a semantic version like 0.1.1 or v0.1.1\n' >&2
@@ -40,14 +47,6 @@ jobs:
             fi
             semver="${requested#v}"
           else
-            latest="$(
-              git tag -l 'v[0-9]*.[0-9]*.[0-9]*' |
-                grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' |
-                sed 's/^v//' |
-                sort -V |
-                tail -n 1 ||
-                true
-            )"
             if [[ -z "${latest}" ]]; then
               semver="0.1.1"
             else
@@ -58,8 +57,10 @@ jobs:
 
           tag="v${semver}"
           latest_tag="<none>"
+          previous_tag=""
           if [[ -n "${latest}" ]]; then
             latest_tag="v${latest}"
+            previous_tag="${latest_tag}"
           fi
           if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
             printf 'release tag %s already exists\n' "${tag}" >&2
@@ -69,6 +70,7 @@ jobs:
           {
             printf 'semver=%s\n' "${semver}"
             printf 'tag=%s\n' "${tag}"
+            printf 'previous_tag=%s\n' "${previous_tag}"
           } >>"${GITHUB_OUTPUT}"
 
           {
@@ -102,22 +104,25 @@ jobs:
       - name: Render release manifests
         run: make render IMG=ghcr.io/cognilabz/cognisecrets:${{ steps.version.outputs.tag }}
 
+      - name: Generate release notes
+        run: tools/generate-release-notes.sh "${{ steps.version.outputs.tag }}" "ghcr.io/cognilabz/cognisecrets:${{ steps.version.outputs.tag }}" "${{ steps.version.outputs.previous_tag }}"
+
       - name: Check whitespace
         run: git diff --check
 
-      - name: Commit rendered manifests
+      - name: Commit release artifacts
         shell: bash
         run: |
           set -euo pipefail
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add manifests
+          git add manifests docs/release-notes README.md
           if git diff --cached --quiet; then
-            printf 'No manifest changes to commit.\n'
+            printf 'No release artifact changes to commit.\n'
             exit 0
           fi
-          git commit -m "Render manifests for ${{ steps.version.outputs.tag }}"
+          git commit -m "Prepare release ${{ steps.version.outputs.tag }}"
           git push origin "HEAD:${GITHUB_REF_NAME}"
 
       - name: Log in to GHCR
@@ -145,3 +150,14 @@ jobs:
         run: |
           git tag -a "${{ steps.version.outputs.tag }}" -m "Release ${{ steps.version.outputs.tag }}"
           git push origin "${{ steps.version.outputs.tag }}"
+
+      - name: Create GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.version.outputs.tag }}" \
+            --title "CogniSecrets ${{ steps.version.outputs.tag }}" \
+            --notes-file "docs/release-notes/${{ steps.version.outputs.tag }}.md" \
+            manifests/cognisecrets.yaml \
+            manifests/kustomization.yaml

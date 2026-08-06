@@ -322,7 +322,7 @@ Required examples:
 
 - missing `spec.sources`;
 - empty `spec.sources`;
-- source missing `namespace`;
+- source missing `namespace` is valid and SHOULD be covered as same-namespace resolution;
 - source missing `name`;
 - key mapping missing `name`.
 
