@@ -1,6 +1,6 @@
 # CogniSecrets
 
-CogniSecrets is a minimal Kubernetes controller that composes and synchronizes a target `Secret` from one or more existing source `Secret` objects.
+CogniSecrets is a Kubernetes controller that composes and synchronizes a target `Secret` from one or more existing source `Secret` objects. In combination with kubeseal it can be used as a simple git-based vault.
 
 ## Installation
 
@@ -10,47 +10,57 @@ kubectl apply -k manifests
 
 ## Best Practice (GitOps)
 
-1. create "secrets.yaml"
-2. kubeseal -o yaml < secrets.yaml > sealed-secrets.yaml
-3. create "congisecrets.yaml"
-4. apply both "sealed-secrets.yaml" and "cognisecrets.yaml" to Kubernetes.
+1. create a local `secrets.yaml` file - but never publish the plain secrets file to your git-repos!
 
-Sealed-secrets and cognisecrets can be pushed to git. But never publish the plain secrets file!
+   ```sh
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: vault
+      namespace: dev
+    stringData:
+      username: test-user
+      password: test-password
+   ```
 
-*`kubeseal` is provided by [Bitnami Sealed Secrets](https://github.com/bitnami/sealed-secrets).*
+2. seal the secret and remove local secrets-file (or at least add it to .gitignore).
+   ```sh
+    kubeseal -o yaml < secrets.yaml > sealed-secrets.yaml
+    rm secrets.yaml
+   ```
+   *`kubeseal` is provided by [Bitnami Sealed Secrets](https://github.com/bitnami/sealed-secrets).*
 
-## Example
+3. create the SecretReference manifest "secretreferences.yaml"
 
-Create source and target namespaces:
+   ```sh
+    apiVersion: cognilabz.com/v1
+    kind: SecretReference
+    metadata:
+      name: mysecret
+    spec:
+      type: Opaque
+      sources:
+        - name: vault
+          namespace: dev
+          keys:
+            - name: username
+              target: DB_USERNAME
+            - name: password
+              target: DB_PASSWORD
+   ```
 
-```sh
-kubectl create namespace shared
-kubectl create namespace application
-```
+4. apply sealed-secret and secretreference manifests
 
-Create an authorized source Secret:
+   ```sh
+    kubectl apply -f sealed-secrets.yaml
+    kubectl apply -f secretreferences.yaml
+   ```
 
-```sh
-kubectl -n shared create secret generic database \
-  --from-literal=username=app \
-  --from-literal=password=s3cr3t
+SealedSecrets and SecretReferences can and should be pushed to git.
 
-kubectl -n shared annotate secret database \
-  cognisecrets.cognilabz.com/allowed-namespaces=application
-```
+If you use ArgoCD then add the following custom-resource-definiton [argocd-cm.yaml](docs/argocd-cm.yaml).
 
-Apply a `SecretReference`:
-
-```sh
-kubectl apply -f config/samples/cognilabz_v1_secretreference_renamed_keys.yaml
-```
-
-Inspect the generated target Secret and status:
-
-```sh
-kubectl -n application get secretreference application-credentials
-kubectl -n application get secret application-credentials -o yaml
-```
+More examples can be found in `config/samples/`.
 
 ## Development
 
@@ -58,35 +68,20 @@ kubectl -n application get secret application-credentials -o yaml
 make tools
 make generate manifests
 make test
-```
 
-Run the local kind E2E smoke suite:
-
-```sh
+# run the local kind E2E smoke suite:
 make e2e
-```
 
-Run the full release gate:
-
-```sh
+# run the full release gate:
 make release-gate
-```
 
-Render install manifests:
-
-```sh
+# render install manifests:
 make render
-```
 
-Build the controller image:
-
-```sh
+# build the controller image:
 make docker-build
-```
 
-Generate versioned release install manifests:
-
-```sh
+# generate versioned release install manifests:
 make release-manifest VERSION=v0.1.0
 ```
 
