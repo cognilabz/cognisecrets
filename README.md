@@ -92,12 +92,16 @@ kubectl apply -k manifests
 
 > **Do not commit this file to Git.**
 
+Save this as `secrets.yaml`:
+
 ```yaml
 apiVersion: v1
 kind: Secret
 metadata:
   name: vault
   namespace: dev
+  annotations:
+    cognisecrets.cognilabz.com/allowed-namespaces: dev
 
 stringData:
   username: test-user
@@ -127,6 +131,7 @@ kind: SecretReference
 
 metadata:
   name: mysecret
+  namespace: dev
 
 spec:
   type: Opaque
@@ -242,21 +247,19 @@ make release-manifest VERSION=v0.2.6
 
 # Documentation
 
-1. Product overview
-2. Design principles
-3. API specification
-4. Controller specification
-5. Security model
-6. Lifecycle
-7. Error catalog
-8. Conformance tests
-9. Roadmap
-10. End-to-end testing
-11. Release process
-12. Operations
-13. Release notes
-
-See the `docs/` directory for details.
+1. [Product overview](docs/01-product-overview.md)
+2. [Design principles](docs/02-design-principles.md)
+3. [API specification](docs/03-api-specification.md)
+4. [Controller specification](docs/04-controller-specification.md)
+5. [Security model](docs/05-security-model.md)
+6. [Lifecycle](docs/06-lifecycle.md)
+7. [Error catalog](docs/07-error-catalog.md)
+8. [Conformance tests](docs/08-conformance-test-specification.md)
+9. [Roadmap](docs/09-roadmap.md)
+10. [End-to-end testing](docs/10-e2e-test-concept.md)
+11. [Release process](docs/11-release.md)
+12. [Operations](docs/12-operations.md)
+13. [v0.2.6 release notes](docs/release-notes/v0.2.6.md)
 
 ---
 
